@@ -1,0 +1,43 @@
+{
+	"name": "taofff",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "concurrently -n backend,frontend -c cyan,magenta \"pnpm --filter @taofff/backend dev\" \"pnpm --filter @taofff/frontend dev\"",
+		"dev:cn": "concurrently -n backend,frontend -c cyan,magenta \"cross-env DISABLED_EXCHANGES=bybit pnpm --filter @taofff/backend dev\" \"pnpm --filter @taofff/frontend dev\"",
+		"dev:reset": "powershell -NoProfile -ExecutionPolicy Bypass -Command '$ports=@(8080,5173); foreach($p in $ports){ $conns=Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue; foreach($c in $conns){ Stop-Process -Id $c.OwningProcess -Force -ErrorAction SilentlyContinue } }; exit 0' ; pnpm dev:cn",
+		"dev:backend": "pnpm --filter @taofff/backend dev",
+		"dev:backend:cn": "cross-env DISABLED_EXCHANGES=bybit pnpm --filter @taofff/backend dev",
+		"dev:frontend": "pnpm --filter @taofff/frontend dev",
+		"build": "pnpm --filter @taofff/shared build && pnpm --filter @taofff/backend build && pnpm --filter @taofff/frontend build",
+		"build:shared": "pnpm --filter @taofff/shared build",
+		"build:backend": "pnpm --filter @taofff/backend build",
+		"build:frontend": "pnpm --filter @taofff/frontend build",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"lint": "biome check .",
+		"lint:fix": "biome check --write .",
+		"format": "biome format --write .",
+		"db:generate": "pnpm --filter @taofff/backend db:generate",
+		"db:push": "pnpm --filter @taofff/backend db:push"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.0.0",
+		"concurrently": "^9.0.0",
+		"cross-env": "^7.0.3",
+		"typescript": "^5.5.0",
+		"vitest": "^3.2.0"
+	},
+	"engines": {
+		"node": ">=20.0.0",
+		"pnpm": ">=9.0.0"
+	},
+	"pnpm": {
+		"onlyBuiltDependencies": [
+			"better-sqlite3",
+			"esbuild",
+			"ccxt"
+		]
+	}
+}

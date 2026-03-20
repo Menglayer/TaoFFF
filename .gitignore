@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Database
+data/*.db
+data/*.db-wal
+data/*.db-shm
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test coverage
+coverage/
+
+# Misc
+*.tgz
+.cache/
+nul
