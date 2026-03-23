@@ -43,10 +43,13 @@ export class SpreadEngine {
 				const shortRate = shortIdx === 0 ? a : b
 
 				const grossApr = computeGrossApr(shortRate.apr, longRate.apr)
-				// Only compute price spread when both mark prices are available
+				const priceA = a.markPrice > 0 ? a.markPrice : a.indexPrice
+				const priceB = b.markPrice > 0 ? b.markPrice : b.indexPrice
+
+				// Only compute price spread when prices are available
 				const spreadPct =
-					a.markPrice > 0 && b.markPrice > 0
-						? computeSpread(a.markPrice, b.markPrice)
+					priceA > 0 && priceB > 0
+						? computeSpread(priceA, priceB)
 						: 0
 
 				spreads.push({
@@ -121,10 +124,13 @@ export class SpreadEngine {
 
 					if (netApr < this.config.minNetAprPct) continue
 
-					// Only compute price spread when both mark prices are available
+					const priceLong = longRate.markPrice > 0 ? longRate.markPrice : longRate.indexPrice
+					const priceShort = shortRate.markPrice > 0 ? shortRate.markPrice : shortRate.indexPrice
+
+					// Only compute price spread when prices are available
 					const spreadPct =
-						longRate.markPrice > 0 && shortRate.markPrice > 0
-							? computeSpread(longRate.markPrice, shortRate.markPrice)
+						priceLong > 0 && priceShort > 0
+							? computeSpread(priceLong, priceShort)
 							: 0
 
 					// Determine the worst quality between the two rates

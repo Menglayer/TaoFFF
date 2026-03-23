@@ -25,13 +25,29 @@ export class HTXExchange extends BaseExchange {
 	}
 
 	async fetchAllFundingRates(): Promise<FundingRateSnapshot[]> {
-		const rates = await this.exchange.fetchFundingRates()
+		if (this.symbols.length === 0) {
+			this.symbols = await this.fetchPerpSymbols()
+		}
+
+		// HTX fetchFundingRates doesn't include mark price, fetch tickers in parallel
+		const [rates, tickers] = await Promise.all([
+			this.exchange.fetchFundingRates(),
+			this.exchange.fetchTickers(this.symbols),
+		])
+
 		const now = Date.now()
 		const snapshots: FundingRateSnapshot[] = []
 
 		for (const fr of Object.values(rates)) {
 			if (fr.fundingRate == null) continue
-			const symbol = normalizeSymbol(fr.symbol)
+			// HTX sometimes omits :USDT from the key in funding rates, check symbol mapping
+			const rawSymbol = fr.symbol
+			let tc = tickers[rawSymbol]
+			if (tc == null && !rawSymbol.endsWith(":USDT")) {
+				tc = tickers[`${rawSymbol}:USDT`]
+			}
+			const fallbackPrice = tc?.last ?? tc?.close ?? 0
+			const symbol = normalizeSymbol(rawSymbol)
 			const rate = fr.fundingRate
 			snapshots.push({
 				symbol,
@@ -39,8 +55,8 @@ export class HTXExchange extends BaseExchange {
 				rate,
 				apr: computeApr(rate, this.settlementHours),
 				predictedRate: fr.nextFundingRate ?? null,
-				markPrice: fr.markPrice ?? 0,
-				indexPrice: fr.indexPrice ?? 0,
+				markPrice: fr.markPrice ?? fallbackPrice,
+				indexPrice: fr.indexPrice ?? fallbackPrice,
 				settlementHours: this.settlementHours,
 				nextSettlementTs: fr.nextFundingTimestamp ?? 0,
 				receiveTs: now,
@@ -51,10 +67,11 @@ export class HTXExchange extends BaseExchange {
 		return snapshots
 	}
 
+	private pollTimer: ReturnType<typeof setTimeout> | null = null
+
 	async startStreaming(onUpdate: (snapshots: FundingRateSnapshot[]) => void): Promise<void> {
 		if (this.streaming) return
 		this.streaming = true
-		this.abortController = new AbortController()
 
 		try {
 			const snapshots = await this.fetchAllFundingRates()
@@ -65,55 +82,25 @@ export class HTXExchange extends BaseExchange {
 			// non-fatal: continue with streaming startup
 		}
 
-		try {
-			this.symbols = await this.fetchPerpSymbols()
-		} catch {
-			this.symbols = []
-		}
-
-		void this.streamLoop(onUpdate)
+		this.schedulePoll(onUpdate)
 	}
 
-	private async streamLoop(onUpdate: (snapshots: FundingRateSnapshot[]) => void): Promise<void> {
-		let attempt = 0
-		while (this.streaming) {
-			if (this.symbols.length === 0) {
-				await new Promise((resolve) => setTimeout(resolve, 1000))
-				continue
-			}
-
-			for (const symbol of this.symbols) {
-				if (!this.streaming) break
-				try {
-					const fr = await this.exchange.watchFundingRate(symbol)
-					if (fr.fundingRate == null) continue
-					const now = Date.now()
-					const normalized = normalizeSymbol(fr.symbol)
-					const rate = fr.fundingRate
-					const snapshot: FundingRateSnapshot = {
-						symbol: normalized,
-						exchange: this.exchangeId,
-						rate,
-						apr: computeApr(rate, this.settlementHours),
-						predictedRate: fr.nextFundingRate ?? null,
-						markPrice: fr.markPrice ?? 0,
-						indexPrice: fr.indexPrice ?? 0,
-						settlementHours: this.settlementHours,
-						nextSettlementTs: fr.nextFundingTimestamp ?? 0,
-						receiveTs: now,
-						quality: assessDataQuality(now),
-					}
-					onUpdate([snapshot])
-					attempt = 0
-				} catch {
-					if (!this.streaming) break
-					const delay = exponentialBackoff(attempt)
-					attempt++
-					console.warn(`[${this.exchangeId}] Reconnecting in ${delay}ms (attempt ${attempt})`)
-					await new Promise((resolve) => setTimeout(resolve, delay))
+	private schedulePoll(onUpdate: (snapshots: FundingRateSnapshot[]) => void, attempt = 0): void {
+		if (!this.streaming) return
+		const delay = attempt === 0 ? 30_000 : exponentialBackoff(attempt, 30_000)
+		this.pollTimer = setTimeout(async () => {
+			if (!this.streaming) return
+			try {
+				const snapshots = await this.fetchAllFundingRates()
+				if (this.streaming && snapshots.length > 0) {
+					onUpdate(snapshots)
 				}
+				this.schedulePoll(onUpdate, 0)
+			} catch {
+				console.warn(`[${this.exchangeId}] Reconnecting in ${delay}ms (attempt ${attempt + 1})`)
+				this.schedulePoll(onUpdate, attempt + 1)
 			}
-		}
+		}, delay)
 	}
 
 	override updateSymbols(symbols: string[]): void {
@@ -128,6 +115,10 @@ export class HTXExchange extends BaseExchange {
 		this.streaming = false
 		this.abortController?.abort()
 		this.abortController = null
+		if (this.pollTimer != null) {
+			clearTimeout(this.pollTimer)
+			this.pollTimer = null
+		}
 		await this.exchange.close()
 	}
 
