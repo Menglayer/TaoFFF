@@ -119,7 +119,7 @@ export function OpportunityCard({ opp }: { opp: ArbitrageOpportunity }) {
 					<div className="flex flex-col p-2.5 rounded-lg bg-gray-800/30 border border-gray-800/50">
 						<span className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">价差</span>
 						<span className="text-sm font-bold text-gray-300">
-							{(opp.spreadPct * 100).toFixed(4)}%
+							{opp.spreadPct.toFixed(4)}%
 						</span>
 					</div>
 				)}
@@ -137,7 +137,7 @@ export function OpportunityCard({ opp }: { opp: ArbitrageOpportunity }) {
 						</div>
 						<div className="flex justify-between items-center pt-1.5 mt-0.5 border-t border-gray-800">
 							<span className="text-gray-400">价差</span>
-							<span className="text-blue-300 font-mono">{(opp.spreadPct * 100).toFixed(4)}%</span>
+							<span className="text-blue-300 font-mono">{opp.spreadPct.toFixed(4)}%</span>
 						</div>
 					</div>
 				</div>
