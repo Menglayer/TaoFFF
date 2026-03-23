@@ -1,4 +1,4 @@
-import { DataQuality, type Exchange } from "@taofff/shared"
+import { type Exchange, DEFAULT_DISABLED_EXCHANGES, DataQuality } from "@taofff/shared"
 import { useEffect, useMemo, useState } from "react"
 import { FilterBar } from "../components/FilterBar"
 import { OpportunityPanel } from "../components/OpportunityPanel"
@@ -50,11 +50,21 @@ export function FundingRatePage() {
 	const [searchQuery, setSearchQuery] = useState("")
 	const [enabledExchanges, setEnabledExchanges] = useState<Record<string, boolean>>(() => {
 		if (typeof window === "undefined") {
-			return Object.fromEntries(ALL_EXCHANGES.map((exchange) => [exchange, true]))
+			return Object.fromEntries(
+				ALL_EXCHANGES.map((exchange) => [
+					exchange,
+					!DEFAULT_DISABLED_EXCHANGES.includes(exchange),
+				]),
+			)
 		}
 		const saved = window.localStorage.getItem("taofff-enabled-exchanges")
 		if (!saved) {
-			return Object.fromEntries(ALL_EXCHANGES.map((exchange) => [exchange, true]))
+			return Object.fromEntries(
+				ALL_EXCHANGES.map((exchange) => [
+					exchange,
+					!DEFAULT_DISABLED_EXCHANGES.includes(exchange),
+				]),
+			)
 		}
 		try {
 			const parsed = JSON.parse(saved) as Record<string, boolean>
@@ -62,7 +72,12 @@ export function FundingRatePage() {
 				ALL_EXCHANGES.map((exchange) => [exchange, parsed[exchange] !== false]),
 			)
 		} catch {
-			return Object.fromEntries(ALL_EXCHANGES.map((exchange) => [exchange, true]))
+			return Object.fromEntries(
+				ALL_EXCHANGES.map((exchange) => [
+					exchange,
+					!DEFAULT_DISABLED_EXCHANGES.includes(exchange),
+				]),
+			)
 		}
 	})
 

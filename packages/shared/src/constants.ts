@@ -18,7 +18,7 @@ export const SETTLEMENT_HOURS: Record<Exchange, number> = {
 	[Exchange.OKX]: 8,
 	[Exchange.Bybit]: 8,
 	[Exchange.Bitget]: 8,
-	[Exchange.Backpack]: 8,
+	[Exchange.Backpack]: 1,
 	[Exchange.Gate]: 8,
 	[Exchange.KuCoin]: 8,
 	[Exchange.HTX]: 8,
@@ -62,3 +62,14 @@ export const WS_CLOSE_CODES = {
 
 /** CCXT perpetual symbol suffix for USDT-margined contracts */
 export const PERP_SUFFIX = ":USDT"
+
+/**
+ * Exchanges that are disabled (unchecked) by default in the UI.
+ * These exchanges have limitations (e.g. no batch funding rate API,
+ * slow per-symbol fetching, or regional restrictions).
+ */
+export const DEFAULT_DISABLED_EXCHANGES: Exchange[] = [
+	Exchange.Coinbase,
+	Exchange.KuCoin,
+	Exchange.MEXC,
+]

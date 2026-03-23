@@ -25,13 +25,34 @@ export class CoinbaseExchange extends BaseExchange {
 	}
 
 	async fetchAllFundingRates(): Promise<FundingRateSnapshot[]> {
-		const rates = await this.exchange.fetchFundingRates()
+		// Coinbase ccxt does not support batch fetchFundingRates().
+		// Fetch per-symbol using fetchFundingRate() instead.
+		if (this.symbols.length === 0) {
+			await this.exchange.loadMarkets()
+			this.symbols = Object.values(this.exchange.markets)
+				.filter((m) => m.type === "swap" && m.active === true)
+				.map((m) => m.symbol)
+		}
+
 		const now = Date.now()
 		const snapshots: FundingRateSnapshot[] = []
 
-		for (const fr of Object.values(rates)) {
+		const results = await Promise.allSettled(
+			this.symbols.map(async (sym) => {
+				const fr = await this.exchange.fetchFundingRate(sym)
+				return fr
+			}),
+		)
+
+		for (const result of results) {
+			if (result.status !== "fulfilled" || result.value == null) continue
+			const fr = result.value
 			if (fr.fundingRate == null) continue
-			const symbol = normalizeSymbol(fr.symbol)
+			// Coinbase uses USDC-margined — normalize to USDT for cross-exchange comparison
+			let symbol = normalizeSymbol(fr.symbol)
+			if (symbol.endsWith("/USDC")) {
+				symbol = symbol.replace(/\/USDC$/, "/USDT")
+			}
 			const rate = fr.fundingRate
 			snapshots.push({
 				symbol,

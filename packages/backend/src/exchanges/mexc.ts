@@ -25,11 +25,34 @@ export class MEXCExchange extends BaseExchange {
 	}
 
 	async fetchAllFundingRates(): Promise<FundingRateSnapshot[]> {
-		const rates = await this.exchange.fetchFundingRates()
+		// MEXC ccxt does not support batch fetchFundingRates().
+		// Fetch per-symbol using fetchFundingRate() instead.
+		if (this.symbols.length === 0) {
+			await this.exchange.loadMarkets()
+			this.symbols = Object.values(this.exchange.markets)
+				.filter(
+					(m) =>
+						m.type === "swap" &&
+						m.linear === true &&
+						m.settle === "USDT" &&
+						m.active === true,
+				)
+				.map((m) => m.symbol)
+		}
+
 		const now = Date.now()
 		const snapshots: FundingRateSnapshot[] = []
 
-		for (const fr of Object.values(rates)) {
+		const results = await Promise.allSettled(
+			this.symbols.map(async (sym) => {
+				const fr = await this.exchange.fetchFundingRate(sym)
+				return fr
+			}),
+		)
+
+		for (const result of results) {
+			if (result.status !== "fulfilled" || result.value == null) continue
+			const fr = result.value
 			if (fr.fundingRate == null) continue
 			const symbol = normalizeSymbol(fr.symbol)
 			const rate = fr.fundingRate

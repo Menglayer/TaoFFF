@@ -5,11 +5,14 @@ import type { BaseExchange } from "./base"
 import { BinanceExchange } from "./binance"
 import { BitgetExchange } from "./bitget"
 import { BybitExchange } from "./bybit"
+import { CoinbaseExchange } from "./coinbase"
+import { EdgeXExchange } from "./edgex"
 import { ExtendedExchange } from "./extended"
 import { GateExchange } from "./gate"
 import { GRVTExchange } from "./grvt"
 import { HTXExchange } from "./htx"
 import { HyperliquidExchange } from "./hyperliquid"
+import { KuCoinExchange } from "./kucoin"
 import { LighterExchange } from "./lighter"
 import { MEXCExchange } from "./mexc"
 import { OKXExchange } from "./okx"
@@ -18,11 +21,13 @@ export { BaseExchange } from "./base"
 
 const exchangeMap: Partial<Record<Exchange, () => BaseExchange>> = {
 	[Exchange.Binance]: () => new BinanceExchange(),
+	[Exchange.Coinbase]: () => new CoinbaseExchange(),
 	[Exchange.OKX]: () => new OKXExchange(),
 	[Exchange.Bybit]: () => new BybitExchange(),
 	[Exchange.Bitget]: () => new BitgetExchange(),
 	[Exchange.Backpack]: () => new BackpackExchange(),
 	[Exchange.Gate]: () => new GateExchange(),
+	[Exchange.KuCoin]: () => new KuCoinExchange(),
 	[Exchange.HTX]: () => new HTXExchange(),
 	[Exchange.MEXC]: () => new MEXCExchange(),
 	[Exchange.Hyperliquid]: () => new HyperliquidExchange(),
@@ -30,6 +35,7 @@ const exchangeMap: Partial<Record<Exchange, () => BaseExchange>> = {
 	[Exchange.Lighter]: () => new LighterExchange(),
 	[Exchange.GRVT]: () => new GRVTExchange(),
 	[Exchange.Extended]: () => new ExtendedExchange(),
+	[Exchange.EdgeX]: () => new EdgeXExchange(),
 }
 
 /** Create a single exchange adapter by ID */
@@ -45,11 +51,13 @@ export function createExchange(id: Exchange): BaseExchange {
 export function createAllExchanges(): BaseExchange[] {
 	const enabledExchanges: Exchange[] = [
 		Exchange.Binance,
+		Exchange.Coinbase,
 		Exchange.OKX,
 		Exchange.Bybit,
 		Exchange.Bitget,
 		Exchange.Backpack,
 		Exchange.Gate,
+		Exchange.KuCoin,
 		Exchange.HTX,
 		Exchange.MEXC,
 		Exchange.Hyperliquid,
@@ -57,6 +65,7 @@ export function createAllExchanges(): BaseExchange[] {
 		Exchange.Lighter,
 		Exchange.GRVT,
 		Exchange.Extended,
+		Exchange.EdgeX,
 	]
 
 	return enabledExchanges.map((id) => createExchange(id))

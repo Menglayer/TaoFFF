@@ -10,15 +10,18 @@ import ccxt from "ccxt"
 import { BaseExchange, type BBO, exponentialBackoff } from "./base"
 
 /**
- * Backpack uses USD-margined perpetuals (e.g. BTC/USD:USD).
+ * Backpack uses USDC-margined perpetuals (e.g. BTC/USDC:USDC).
  * Normalize to USDT quote for cross-exchange comparison consistency,
  * matching how Lighter, edgeX, and other adapters handle USD→USDT mapping.
  */
 function normalizeBackpackSymbol(raw: string): string {
 	const symbol = normalizeSymbol(raw)
-	// Convert BTC/USD → BTC/USDT for cross-exchange matching
+	// Convert BTC/USD → BTC/USDT, BTC/USDC → BTC/USDT for cross-exchange matching
 	if (symbol.endsWith("/USD")) {
 		return `${symbol}T`
+	}
+	if (symbol.endsWith("/USDC")) {
+		return symbol.replace(/\/USDC$/, "/USDT")
 	}
 	return symbol
 }
@@ -77,11 +80,28 @@ export class BackpackExchange extends BaseExchange {
 	}
 
 	async fetchAllFundingRates(): Promise<FundingRateSnapshot[]> {
-		const rates = await this.exchange.fetchFundingRates()
+		// Backpack ccxt does not support batch fetchFundingRates().
+		// Fetch per-symbol using fetchFundingRate() instead.
+		if (this.symbols.length === 0) {
+			await this.exchange.loadMarkets()
+			this.symbols = Object.values(this.exchange.markets)
+				.filter((m) => m.type === "swap" && m.active === true)
+				.map((m) => m.symbol)
+		}
+
 		const now = Date.now()
 		const snapshots: FundingRateSnapshot[] = []
 
-		for (const fr of Object.values(rates)) {
+		const results = await Promise.allSettled(
+			this.symbols.map(async (sym) => {
+				const fr = await this.exchange.fetchFundingRate(sym)
+				return fr
+			}),
+		)
+
+		for (const result of results) {
+			if (result.status !== "fulfilled" || result.value == null) continue
+			const fr = result.value
 			if (fr.fundingRate == null) continue
 			const symbol = normalizeBackpackSymbol(fr.symbol)
 			const rate = fr.fundingRate

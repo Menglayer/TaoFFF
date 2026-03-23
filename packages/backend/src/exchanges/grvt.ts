@@ -144,8 +144,11 @@ export class GRVTExchange extends BaseExchange {
 			for (const entry of [latestEntry]) {
 				if (!entry.instrument) continue
 
-				const rate = Number.parseFloat(entry.funding_rate)
-				if (Number.isNaN(rate)) continue
+				const rawRate = Number.parseFloat(entry.funding_rate)
+				if (Number.isNaN(rawRate)) continue
+				// GRVT returns funding_rate as percentage (e.g. 0.01 = 0.01%)
+				// Convert to decimal (0.0001) to match other exchanges
+				const rate = rawRate / 100
 
 				const symbol = this.normalizeInstrument(entry.instrument)
 				// Only USDT-margined
