@@ -78,7 +78,7 @@ export function Layout() {
 			</aside>
 
 			{/* Main content */}
-			<main className="flex-1 overflow-auto pb-16 md:pb-0">
+			<main className="flex-1 overflow-auto pb-24 md:pb-0">
 				<ErrorBoundary>
 					<Outlet />
 				</ErrorBoundary>
@@ -86,6 +86,15 @@ export function Layout() {
 
 			{/* Mobile Bottom Navigation */}
 			<nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-gray-900 border-t border-gray-800 flex justify-around items-center px-2 z-50 safe-area-pb">
+				<button
+					type="button"
+					onClick={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}
+					className="flex h-12 w-12 items-center justify-center rounded-lg text-gray-300 hover:bg-gray-800"
+					aria-label="切换主题"
+					title="切换深浅色"
+				>
+					{theme === "dark" ? "☀️" : "🌙"}
+				</button>
 				{navItems.map((item) => (
 					<NavLink
 						key={item.to}

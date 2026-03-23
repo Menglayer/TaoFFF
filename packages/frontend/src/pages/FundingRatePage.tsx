@@ -45,11 +45,26 @@ function getExchangeBgClass(exchange: string) {
 }
 
 export function FundingRatePage() {
-	const { rates, connected, loading, error, connect, disconnect } = useRateStore()
+	const { rates, statuses, lastUpdateTs, connected, loading, error, connect, disconnect } =
+		useRateStore()
 	const [searchQuery, setSearchQuery] = useState("")
-	const [enabledExchanges, setEnabledExchanges] = useState<Record<string, boolean>>(
-		Object.fromEntries(ALL_EXCHANGES.map((exchange) => [exchange, true])),
-	)
+	const [enabledExchanges, setEnabledExchanges] = useState<Record<string, boolean>>(() => {
+		if (typeof window === "undefined") {
+			return Object.fromEntries(ALL_EXCHANGES.map((exchange) => [exchange, true]))
+		}
+		const saved = window.localStorage.getItem("taofff-enabled-exchanges")
+		if (!saved) {
+			return Object.fromEntries(ALL_EXCHANGES.map((exchange) => [exchange, true]))
+		}
+		try {
+			const parsed = JSON.parse(saved) as Record<string, boolean>
+			return Object.fromEntries(
+				ALL_EXCHANGES.map((exchange) => [exchange, parsed[exchange] !== false]),
+			)
+		} catch {
+			return Object.fromEntries(ALL_EXCHANGES.map((exchange) => [exchange, true]))
+		}
+	})
 
 	const [sortConfig, setSortConfig] = useState<{
 		key: string
@@ -67,6 +82,11 @@ export function FundingRatePage() {
 		const timer = setInterval(() => setNow(Date.now()), 1000)
 		return () => clearInterval(timer)
 	}, [])
+
+	useEffect(() => {
+		if (typeof window === "undefined") return
+		window.localStorage.setItem("taofff-enabled-exchanges", JSON.stringify(enabledExchanges))
+	}, [enabledExchanges])
 
 	const exchangesList = ALL_EXCHANGES.map((exchange) => ({
 		id: exchange,
@@ -128,10 +148,10 @@ export function FundingRatePage() {
 
 	if (loading) {
 		return (
-			<div className="flex flex-col h-full space-y-6 p-4 md:p-6 animate-in fade-in duration-500">
+			<div className="flex flex-col min-h-full space-y-6 p-4 md:p-6 animate-in fade-in duration-500">
 				<div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
 					<h1 className="text-2xl font-bold tracking-tight text-gray-100 flex items-center gap-3">
-						Live Funding Rates
+						实时资金费率
 					</h1>
 				</div>
 				<SkeletonTable rows={10} columns={5} />
@@ -141,15 +161,14 @@ export function FundingRatePage() {
 
 	if (!connected && Object.keys(rates).length === 0) {
 		return (
-			<div className="flex flex-col h-full space-y-6 p-4 md:p-6 animate-in fade-in duration-500">
+			<div className="flex flex-col min-h-full space-y-6 p-4 md:p-6 animate-in fade-in duration-500">
 				<div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-					<h1 className="text-2xl font-bold tracking-tight text-gray-100">Live Funding Rates</h1>
+					<h1 className="text-2xl font-bold tracking-tight text-gray-100">实时资金费率</h1>
 				</div>
 				<div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-red-300">
-					<p className="font-medium mb-1">Unable to load live rates.</p>
+					<p className="font-medium mb-1">实时费率加载失败。</p>
 					<p className="text-sm text-red-200/90">
-						{error ??
-							"Backend connection failed. Start backend on http://localhost:8080 and refresh."}
+						{error ?? "后端连接失败，请在 http://localhost:8080 启动后端并刷新页面。"}
 					</p>
 				</div>
 			</div>
@@ -157,15 +176,15 @@ export function FundingRatePage() {
 	}
 
 	return (
-		<div className="flex flex-col h-full space-y-6 p-4 md:p-6 animate-in fade-in duration-500">
+		<div className="flex flex-col min-h-full space-y-6 p-4 md:p-6 animate-in fade-in duration-500">
 			<div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
 				<h1 className="text-2xl font-bold tracking-tight text-gray-100 flex items-center gap-3">
-					Live Funding Rates
+					实时资金费率
 					<div
 						className={`flex items-center gap-2 text-xs font-medium px-2.5 py-1 rounded-full border ${connected ? "bg-green-500/10 text-green-400 border-green-500/20" : "bg-red-500/10 text-red-400 border-red-500/20"}`}
 					>
 						<div className={`w-2 h-2 rounded-full ${connected ? "bg-green-500" : "bg-red-500"}`} />
-						{connected ? "WS Connected" : "Disconnected"}
+						{connected ? "WS 已连接" : "连接已断开"}
 					</div>
 				</h1>
 			</div>
@@ -175,6 +194,7 @@ export function FundingRatePage() {
 					...ex,
 					enabled: !!enabledExchanges[ex.id],
 					colorClass: getExchangeBgClass(ex.id),
+					connected: statuses.find((s) => s.exchange === ex.id)?.connected ?? false,
 				}))}
 				onToggleExchange={handleToggleExchange}
 				searchQuery={searchQuery}
@@ -182,26 +202,39 @@ export function FundingRatePage() {
 				symbolCount={sortedSymbols.length}
 			/>
 
+			<div className="flex items-center gap-3 text-xs text-gray-500 px-1">
+				<div className="flex items-center gap-1.5">
+					<div
+						className={`w-1.5 h-1.5 rounded-full ${connected ? "bg-green-500 animate-pulse" : "bg-gray-600"}`}
+					/>
+					<span>
+						{lastUpdateTs > 0
+							? `最后更新 ${new Date(lastUpdateTs).toLocaleTimeString("zh-CN", { hour12: false })} · ${Math.floor((now - lastUpdateTs) / 1000)}秒前`
+							: "等待数据..."}
+					</span>
+				</div>
+			</div>
+
 			<OpportunityPanel />
 
 			{sortedSymbols.length === 0 ? (
 				<div className="flex flex-col items-center justify-center py-20 text-gray-500 bg-gray-900/30 rounded-xl border border-gray-800">
-					<p>No matching symbols found.</p>
+					<p>没有匹配的交易对。</p>
 				</div>
 			) : (
-				<div className="overflow-x-auto rounded-xl border border-gray-800 bg-gray-900/50 shadow-2xl backdrop-blur-sm relative">
-					<div className="md:hidden absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-gray-900/80 to-transparent pointer-events-none z-20" />
-					<div className="md:hidden absolute right-2 top-2 text-[10px] text-gray-500 z-30 pointer-events-none animate-pulse">
-						Scroll →
+				<div className="overflow-x-auto rounded-xl border border-gray-800 bg-gray-900/50 shadow-2xl backdrop-blur-sm relative z-0">
+					<div className="md:hidden absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-gray-900/80 to-transparent pointer-events-none z-10" />
+					<div className="md:hidden absolute right-2 top-2 text-[10px] text-gray-500 z-10 pointer-events-none animate-pulse">
+						可横向滚动 →
 					</div>
 					<table className="w-full text-left text-sm text-gray-300">
-						<thead className="bg-gray-950/80 text-xs uppercase text-gray-400 sticky top-0 z-10 backdrop-blur-md">
+						<thead className="bg-gray-950/80 text-xs uppercase text-gray-400 backdrop-blur-md">
 							<tr>
 								<th
 									className="px-6 py-4 font-semibold tracking-wider cursor-pointer hover:text-gray-200 transition-colors"
 									onClick={() => handleSort("symbol")}
 								>
-									Symbol{" "}
+									交易对{" "}
 									{sortConfig?.key === "symbol" && (sortConfig.direction === "asc" ? "↑" : "↓")}
 								</th>
 
@@ -232,7 +265,7 @@ export function FundingRatePage() {
 												className="py-2 cursor-pointer hover:bg-gray-800/50 transition-colors"
 												onClick={() => handleSort("rate", ex.id)}
 											>
-												RATE%{" "}
+												费率%{" "}
 												{sortConfig?.key === "rate" &&
 													sortConfig?.exchange === ex.id &&
 													(sortConfig.direction === "asc" ? "↑" : "↓")}
@@ -241,7 +274,7 @@ export function FundingRatePage() {
 												className="py-2 cursor-pointer hover:bg-gray-800/50 transition-colors"
 												onClick={() => handleSort("apr", ex.id)}
 											>
-												APR%{" "}
+												年化%{" "}
 												{sortConfig?.key === "apr" &&
 													sortConfig?.exchange === ex.id &&
 													(sortConfig.direction === "asc" ? "↑" : "↓")}
@@ -250,7 +283,7 @@ export function FundingRatePage() {
 												className="py-2 cursor-pointer hover:bg-gray-800/50 transition-colors"
 												onClick={() => handleSort("settlement", ex.id)}
 											>
-												COUNTDOWN{" "}
+												结算倒计时{" "}
 												{sortConfig?.key === "settlement" &&
 													sortConfig?.exchange === ex.id &&
 													(sortConfig.direction === "asc" ? "↑" : "↓")}

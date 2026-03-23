@@ -18,41 +18,31 @@ export function OpportunityPanel() {
 			.slice(0, 20)
 	}, [opportunities, minNetApr])
 
-	if (opportunities.length === 0) {
-		return null
-	}
-
 	const bestNetApr =
 		opportunities.length > 0 ? Math.max(...opportunities.map((o) => o.netApr)).toFixed(2) : "0.00"
 
 	return (
-		<div className="flex flex-col border border-gray-800 bg-gray-900/40 rounded-xl overflow-hidden shadow-2xl backdrop-blur-sm transition-all duration-300">
+		<div className="relative flex flex-col border border-gray-800 bg-gray-900/40 rounded-xl overflow-hidden shadow-2xl backdrop-blur-sm transition-all duration-300">
 			{/* Header / Summary Bar */}
-			<button
-				type="button"
-				className="flex items-center justify-between p-4 bg-gray-950/80 cursor-pointer hover:bg-gray-900 transition-colors w-full text-left"
-				onClick={() => setIsExpanded(!isExpanded)}
-			>
+			<div className="flex items-center justify-between p-4 bg-gray-950/80 transition-colors w-full text-left">
 				<div className="flex items-center gap-4">
 					<div className="flex items-center justify-center w-8 h-8 rounded-full bg-red-500/20 text-red-400 font-black animate-pulse">
 						🔥
 					</div>
 					<h2 className="text-lg font-bold text-gray-200 tracking-tight">
-						{filteredOpps.length} Opportunities Found
+						发现 {filteredOpps.length} 条机会
 					</h2>
 					<span className="px-3 py-1 text-xs font-bold rounded-full bg-green-500/20 text-green-400 border border-green-500/30">
-						Best: {bestNetApr}% APR
+						最高：{bestNetApr}% 年化
 					</span>
 				</div>
 
 				<div className="flex items-center gap-6">
 					<button
 						type="button"
+						aria-label={isExpanded ? "折叠套利面板" : "展开套利面板"}
 						className="text-gray-400 hover:text-white p-1 rounded-md hover:bg-gray-800 transition-colors"
-						onClick={(e) => {
-							e.stopPropagation()
-							setIsExpanded(!isExpanded)
-						}}
+						onClick={() => setIsExpanded(!isExpanded)}
 					>
 						<svg
 							className={`w-5 h-5 transition-transform duration-300 ${isExpanded ? "rotate-180" : ""}`}
@@ -72,7 +62,7 @@ export function OpportunityPanel() {
 						</svg>
 					</button>
 				</div>
-			</button>
+			</div>
 
 			{/* Expanded Content */}
 			{isExpanded && (
@@ -81,7 +71,7 @@ export function OpportunityPanel() {
 					<div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-800/50">
 						<div className="flex items-center gap-4">
 							<label htmlFor="min-apr-slider" className="text-sm font-medium text-gray-400">
-								Min Net APR:
+								最低净年化：
 							</label>
 							<div className="flex items-center gap-3">
 								<input
@@ -97,9 +87,7 @@ export function OpportunityPanel() {
 								<span className="text-sm font-bold text-gray-300 w-12">{minNetApr}%</span>
 							</div>
 						</div>
-						<div className="text-xs text-gray-500 font-medium">
-							Showing top {filteredOpps.length} results
-						</div>
+						<div className="text-xs text-gray-500 font-medium">显示前 {filteredOpps.length} 条</div>
 					</div>
 
 					{/* Grid */}
@@ -111,13 +99,13 @@ export function OpportunityPanel() {
 						</div>
 					) : (
 						<div className="flex flex-col items-center justify-center py-10 text-gray-500">
-							<p>No opportunities matching your criteria.</p>
+							<p>没有符合筛选条件的机会。</p>
 							<button
 								type="button"
 								className="mt-2 text-sm text-blue-400 hover:text-blue-300 underline"
 								onClick={() => setMinNetApr(0)}
 							>
-								Clear Filters
+								清除筛选
 							</button>
 						</div>
 					)}

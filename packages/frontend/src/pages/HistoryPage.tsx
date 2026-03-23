@@ -129,21 +129,21 @@ export function HistoryPage() {
 				className={`px-6 py-3 font-medium text-sm transition-colors ${activeTab === "trades" ? "text-indigo-400 border-b-2 border-indigo-500" : "text-gray-400 hover:text-white"}`}
 				onClick={() => setActiveTab("trades")}
 			>
-				Trade History
+				交易历史
 			</button>
 			<button
 				type="button"
 				className={`px-6 py-3 font-medium text-sm transition-colors ${activeTab === "funding" ? "text-indigo-400 border-b-2 border-indigo-500" : "text-gray-400 hover:text-white"}`}
 				onClick={() => setActiveTab("funding")}
 			>
-				Funding Earned
+				资金费收益
 			</button>
 			<button
 				type="button"
 				className={`px-6 py-3 font-medium text-sm transition-colors ${activeTab === "alerts" ? "text-indigo-400 border-b-2 border-indigo-500" : "text-gray-400 hover:text-white"}`}
 				onClick={() => setActiveTab("alerts")}
 			>
-				Alert History
+				告警历史
 			</button>
 		</div>
 	)
@@ -153,7 +153,7 @@ export function HistoryPage() {
 			{/* Summary Cards */}
 			<div className="grid grid-cols-1 md:grid-cols-4 gap-4">
 				<div className="bg-[#1a1b2e] border border-[#2a2b4a] rounded-xl p-5">
-					<p className="text-gray-400 text-sm mb-1">Total P&amp;L</p>
+					<p className="text-gray-400 text-sm mb-1">总盈亏</p>
 					<p
 						className={`text-2xl font-bold ${summary.totalPnl >= 0 ? "text-emerald-400" : "text-red-400"}`}
 					>
@@ -161,11 +161,11 @@ export function HistoryPage() {
 					</p>
 				</div>
 				<div className="bg-[#1a1b2e] border border-[#2a2b4a] rounded-xl p-5">
-					<p className="text-gray-400 text-sm mb-1">Total Funding Earned</p>
+					<p className="text-gray-400 text-sm mb-1">累计资金费收益</p>
 					<p className="text-2xl font-bold text-emerald-400">${summary.totalFunding.toFixed(4)}</p>
 				</div>
 				<div className="bg-[#1a1b2e] border border-[#2a2b4a] rounded-xl p-5">
-					<p className="text-gray-400 text-sm mb-1">Win Rate</p>
+					<p className="text-gray-400 text-sm mb-1">胜率</p>
 					<p className="text-2xl font-bold text-white">
 						{summary.winRate.toFixed(1)}%{" "}
 						<span className="text-sm font-normal text-gray-500">
@@ -174,7 +174,7 @@ export function HistoryPage() {
 					</p>
 				</div>
 				<div className="bg-[#1a1b2e] border border-[#2a2b4a] rounded-xl p-5">
-					<p className="text-gray-400 text-sm mb-1">Avg Hold Time</p>
+					<p className="text-gray-400 text-sm mb-1">平均持仓时长</p>
 					<p className="text-2xl font-bold text-white">{formatDuration(summary.avgHoldTime)}</p>
 				</div>
 			</div>
@@ -188,16 +188,16 @@ export function HistoryPage() {
 						<thead className="bg-[#0d0e1a]/50 text-gray-400 text-xs uppercase tracking-wider border-b border-[#2a2b4a]">
 							<tr>
 								<th className="p-4 font-medium">ID</th>
-								<th className="p-4 font-medium">Symbol</th>
-								<th className="p-4 font-medium">Long Exch.</th>
-								<th className="p-4 font-medium">Short Exch.</th>
-								<th className="p-4 font-medium">Size</th>
-								<th className="p-4 font-medium">Entry APR</th>
+								<th className="p-4 font-medium">交易对</th>
+								<th className="p-4 font-medium">做多交易所</th>
+								<th className="p-4 font-medium">做空交易所</th>
+								<th className="p-4 font-medium">仓位</th>
+								<th className="p-4 font-medium">开仓年化</th>
 								<th className="p-4 font-medium">P&amp;L</th>
 								<th className="p-4 font-medium">Funding</th>
-								<th className="p-4 font-medium">Status</th>
-								<th className="p-4 font-medium">Opened At</th>
-								<th className="p-4 font-medium">Closed At</th>
+								<th className="p-4 font-medium">状态</th>
+								<th className="p-4 font-medium">开仓时间</th>
+								<th className="p-4 font-medium">平仓时间</th>
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-[#2a2b4a] text-sm">
@@ -248,7 +248,11 @@ export function HistoryPage() {
 											<td className="p-4 text-emerald-400">${Number(funding).toFixed(4)}</td>
 											<td className="p-4">
 												<span className={`px-2 py-1 rounded text-xs border ${statusColor}`}>
-													{status.toUpperCase()}
+													{status === "open"
+														? "持有中"
+														: status === "closed"
+															? "已平仓"
+															: status.toUpperCase()}
 												</span>
 											</td>
 											<td className="p-4 text-gray-400 text-xs">{openedStr}</td>
@@ -259,7 +263,7 @@ export function HistoryPage() {
 							) : (
 								<tr>
 									<td colSpan={11} className="p-8 text-center text-gray-500">
-										No trade history found.
+										暂无交易历史。
 									</td>
 								</tr>
 							)}
@@ -274,10 +278,10 @@ export function HistoryPage() {
 		<div className="space-y-6">
 			{/* Chart */}
 			<div className="bg-[#1a1b2e] border border-[#2a2b4a] rounded-xl p-5">
-				<h3 className="text-white font-medium mb-4">Cumulative Funding Earned</h3>
+				<h3 className="text-white font-medium mb-4">累计资金费收益</h3>
 				{!history || history.filter((t) => (t.fundingEarned ?? 0) > 0).length === 0 ? (
 					<div className="h-[300px] flex items-center justify-center text-gray-500">
-						No funding data collected yet.
+						暂无资金费收益数据。
 					</div>
 				) : (
 					<div ref={chartContainerRef} className="w-full h-[300px]" />
@@ -292,12 +296,12 @@ export function HistoryPage() {
 					<table className="w-full text-left min-w-[600px]">
 						<thead className="bg-[#0d0e1a]/50 text-gray-400 text-xs uppercase tracking-wider border-b border-[#2a2b4a]">
 							<tr>
-								<th className="p-4 font-medium">Symbol</th>
-								<th className="p-4 font-medium">Long Exch.</th>
-								<th className="p-4 font-medium">Short Exch.</th>
-								<th className="p-4 font-medium">Funding Earned</th>
-								<th className="p-4 font-medium">Status</th>
-								<th className="p-4 font-medium">Duration</th>
+								<th className="p-4 font-medium">交易对</th>
+								<th className="p-4 font-medium">做多交易所</th>
+								<th className="p-4 font-medium">做空交易所</th>
+								<th className="p-4 font-medium">资金费收益</th>
+								<th className="p-4 font-medium">状态</th>
+								<th className="p-4 font-medium">持仓时长</th>
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-[#2a2b4a] text-sm">
@@ -337,7 +341,11 @@ export function HistoryPage() {
 											</td>
 											<td className="p-4">
 												<span className={`px-2 py-1 rounded text-xs border ${statusColor}`}>
-													{status.toUpperCase()}
+													{status === "open"
+														? "持有中"
+														: status === "closed"
+															? "已平仓"
+															: status.toUpperCase()}
 												</span>
 											</td>
 											<td className="p-4 text-gray-400">{durationStr}</td>
@@ -347,7 +355,7 @@ export function HistoryPage() {
 							) : (
 								<tr>
 									<td colSpan={6} className="p-8 text-center text-gray-500">
-										No funding data available.
+										暂无资金费数据。
 									</td>
 								</tr>
 							)}
@@ -366,14 +374,14 @@ export function HistoryPage() {
 				<table className="w-full text-left min-w-[800px]">
 					<thead className="bg-[#0d0e1a]/50 text-gray-400 text-xs uppercase tracking-wider border-b border-[#2a2b4a]">
 						<tr>
-							<th className="p-4 font-medium">Rule Name</th>
-							<th className="p-4 font-medium">Metric</th>
-							<th className="p-4 font-medium">Condition</th>
-							<th className="p-4 font-medium">Actual Value</th>
-							<th className="p-4 font-medium">Symbol</th>
-							<th className="p-4 font-medium">Exchange</th>
-							<th className="p-4 font-medium">Message</th>
-							<th className="p-4 font-medium">Triggered At</th>
+							<th className="p-4 font-medium">规则名称</th>
+							<th className="p-4 font-medium">指标</th>
+							<th className="p-4 font-medium">条件</th>
+							<th className="p-4 font-medium">实际值</th>
+							<th className="p-4 font-medium">交易对</th>
+							<th className="p-4 font-medium">交易所</th>
+							<th className="p-4 font-medium">消息</th>
+							<th className="p-4 font-medium">触发时间</th>
 						</tr>
 					</thead>
 					<tbody className="divide-y divide-[#2a2b4a] text-sm">
@@ -401,7 +409,7 @@ export function HistoryPage() {
 						) : (
 							<tr>
 								<td colSpan={8} className="p-8 text-center text-gray-500">
-									No alert events recorded.
+									暂无告警记录。
 								</td>
 							</tr>
 						)}
@@ -413,7 +421,7 @@ export function HistoryPage() {
 
 	return (
 		<div className="p-6">
-			<h2 className="text-2xl font-bold text-white mb-6">History &amp; P&amp;L</h2>
+			<h2 className="text-2xl font-bold text-white mb-6">历史与盈亏</h2>
 			{renderTabs()}
 
 			{activeTab === "trades" && renderTradeHistory()}

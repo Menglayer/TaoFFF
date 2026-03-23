@@ -14,20 +14,20 @@ function StatusBadge({ status }: { status: LoopStatus }) {
 	if (status === LoopStatus.Running) {
 		return (
 			<span className="px-2 py-0.5 text-xs font-semibold rounded-md bg-green-500/20 text-green-400 border border-green-500/30">
-				Running
+				运行中
 			</span>
 		)
 	}
 	if (status === LoopStatus.Paused) {
 		return (
 			<span className="px-2 py-0.5 text-xs font-semibold rounded-md bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
-				Paused
+				已暂停
 			</span>
 		)
 	}
 	return (
 		<span className="px-2 py-0.5 text-xs font-semibold rounded-md bg-gray-500/20 text-gray-400 border border-gray-500/30">
-			Stopped
+			已停止
 		</span>
 	)
 }
@@ -74,7 +74,7 @@ export function LoopCard({ loop }: { loop: LoopConfig }) {
 					type="button"
 					onClick={() => deleteLoop(loop.id)}
 					className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-colors"
-					title="Delete Loop"
+					title="删除循环"
 				>
 					<svg
 						className="w-4 h-4"
@@ -110,11 +110,11 @@ export function LoopCard({ loop }: { loop: LoopConfig }) {
 			<div className="mb-5 p-3 bg-[#0d0e1a]/30 rounded-lg border border-[#2a2b4a]/30">
 				<div className="flex justify-between text-xs font-semibold text-gray-400 mb-2">
 					<div className="flex flex-col">
-						<span>Exit</span>
+						<span>平仓</span>
 						<span className="text-red-400">{loop.exitThresholdApr.toFixed(2)}%</span>
 					</div>
 					<div className="flex flex-col items-center">
-						<span>Current</span>
+						<span>当前</span>
 						<span
 							className={`text-sm ${isAboveEntry ? "text-green-400" : isBelowExit ? "text-red-400" : "text-blue-400"} font-bold`}
 						>
@@ -122,7 +122,7 @@ export function LoopCard({ loop }: { loop: LoopConfig }) {
 						</span>
 					</div>
 					<div className="flex flex-col items-end">
-						<span>Entry</span>
+						<span>开仓</span>
 						<span className="text-green-400">{loop.entryThresholdApr.toFixed(2)}%</span>
 					</div>
 				</div>
@@ -161,7 +161,7 @@ export function LoopCard({ loop }: { loop: LoopConfig }) {
 			{/* Info Row */}
 			<div className="flex items-center justify-between mb-5">
 				<div className="text-sm">
-					<span className="text-gray-400 mr-2">Size:</span>
+					<span className="text-gray-400 mr-2">仓位：</span>
 					<span className="font-semibold text-white">
 						{loop.sizeUsdt} USDT <span className="text-blue-400">× {loop.leverage}x</span>
 					</span>
@@ -169,7 +169,7 @@ export function LoopCard({ loop }: { loop: LoopConfig }) {
 				{loop.activeTradeId && (
 					<div className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-500/10 border border-blue-500/20 rounded text-blue-400 text-xs font-bold uppercase tracking-wider">
 						<span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse" />
-						Position Open
+						持仓中
 					</div>
 				)}
 			</div>
@@ -182,7 +182,7 @@ export function LoopCard({ loop }: { loop: LoopConfig }) {
 						onClick={() => startLoop(loop.id)}
 						className="flex-1 py-2 px-4 bg-green-600/20 hover:bg-green-600/30 text-green-400 border border-green-600/50 font-bold text-sm rounded-lg transition-colors"
 					>
-						Start Loop
+						启动循环
 					</button>
 				)}
 
@@ -193,14 +193,14 @@ export function LoopCard({ loop }: { loop: LoopConfig }) {
 							onClick={() => pauseLoop(loop.id)}
 							className="flex-1 py-2 px-4 bg-yellow-600/20 hover:bg-yellow-600/30 text-yellow-400 border border-yellow-600/50 font-bold text-sm rounded-lg transition-colors"
 						>
-							Pause
+							暂停
 						</button>
 						<button
 							type="button"
 							onClick={() => stopLoop(loop.id)}
 							className="flex-1 py-2 px-4 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-600/50 font-bold text-sm rounded-lg transition-colors"
 						>
-							Stop
+							停止
 						</button>
 					</>
 				)}
@@ -212,14 +212,14 @@ export function LoopCard({ loop }: { loop: LoopConfig }) {
 							onClick={() => startLoop(loop.id)}
 							className="flex-1 py-2 px-4 bg-green-600/20 hover:bg-green-600/30 text-green-400 border border-green-600/50 font-bold text-sm rounded-lg transition-colors"
 						>
-							Resume
+							继续
 						</button>
 						<button
 							type="button"
 							onClick={() => stopLoop(loop.id)}
 							className="flex-1 py-2 px-4 bg-red-600/20 hover:bg-red-600/30 text-red-400 border border-red-600/50 font-bold text-sm rounded-lg transition-colors"
 						>
-							Stop
+							停止
 						</button>
 					</>
 				)}

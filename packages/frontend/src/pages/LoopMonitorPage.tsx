@@ -49,7 +49,7 @@ export function LoopMonitorPage() {
 	return (
 		<div className="p-6 max-w-7xl mx-auto space-y-6">
 			<div className="flex items-center justify-between">
-				<h2 className="text-3xl font-bold text-white tracking-tight">Loop Monitor</h2>
+				<h2 className="text-3xl font-bold text-white tracking-tight">循环监控</h2>
 			</div>
 
 			{error && (
@@ -65,7 +65,7 @@ export function LoopMonitorPage() {
 					onClick={() => setIsFormOpen(!isFormOpen)}
 					className="w-full flex items-center justify-between p-5 text-left hover:bg-[#2a2b4a]/50 transition-colors"
 				>
-					<span className="text-lg font-semibold text-white">Create New Loop</span>
+					<span className="text-lg font-semibold text-white">创建新循环</span>
 					<span className="text-gray-400 bg-[#2a2b4a] w-8 h-8 rounded-full flex items-center justify-center font-bold">
 						{isFormOpen ? "−" : "+"}
 					</span>
@@ -76,7 +76,7 @@ export function LoopMonitorPage() {
 						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
 							<div className="space-y-1.5">
 								<label htmlFor="symbol-input" className="text-sm font-medium text-gray-400">
-									Symbol
+									交易对
 								</label>
 								<input
 									id="symbol-input"
@@ -89,7 +89,7 @@ export function LoopMonitorPage() {
 							</div>
 							<div className="space-y-1.5">
 								<label htmlFor="exchange-a-select" className="text-sm font-medium text-gray-400">
-									Exchange A
+									交易所 A
 								</label>
 								<select
 									id="exchange-a-select"
@@ -106,7 +106,7 @@ export function LoopMonitorPage() {
 							</div>
 							<div className="space-y-1.5">
 								<label htmlFor="exchange-b-select" className="text-sm font-medium text-gray-400">
-									Exchange B
+									交易所 B
 								</label>
 								<select
 									id="exchange-b-select"
@@ -123,7 +123,7 @@ export function LoopMonitorPage() {
 							</div>
 							<div className="space-y-1.5">
 								<label htmlFor="size-input" className="text-sm font-medium text-gray-400">
-									Size (USDT)
+									仓位金额 (USDT)
 								</label>
 								<input
 									id="size-input"
@@ -137,7 +137,7 @@ export function LoopMonitorPage() {
 							</div>
 
 							<div className="space-y-1.5">
-								<label className="text-sm font-medium text-gray-400">Entry Threshold (APR %)</label>
+								<label className="text-sm font-medium text-gray-400">开仓阈值 (APR %)</label>
 								<input
 									type="number"
 									value={entryThresholdApr}
@@ -148,7 +148,7 @@ export function LoopMonitorPage() {
 								/>
 							</div>
 							<div className="space-y-1.5">
-								<label className="text-sm font-medium text-gray-400">Exit Threshold (APR %)</label>
+								<label className="text-sm font-medium text-gray-400">平仓阈值 (APR %)</label>
 								<input
 									type="number"
 									value={exitThresholdApr}
@@ -161,7 +161,7 @@ export function LoopMonitorPage() {
 
 							<div className="space-y-1.5 lg:col-span-2">
 								<label className="text-sm font-medium text-gray-400 flex justify-between">
-									<span>Leverage</span>
+									<span>杠杆</span>
 									<span className="text-blue-400">{leverage}x</span>
 								</label>
 								<input
@@ -187,7 +187,7 @@ export function LoopMonitorPage() {
 								disabled={loading}
 								className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg shadow-[0_0_15px_rgba(37,99,235,0.3)] transition-all disabled:opacity-50"
 							>
-								{loading ? "Creating..." : "Create Loop"}
+								{loading ? "创建中..." : "创建循环"}
 							</button>
 						</div>
 					</form>
@@ -197,7 +197,7 @@ export function LoopMonitorPage() {
 			{/* Grid Section */}
 			<div className="space-y-4">
 				<h3 className="text-lg font-semibold text-gray-300 border-b border-[#2a2b4a] pb-2">
-					Active Loops
+					当前循环
 				</h3>
 
 				{loading && loops.length === 0 ? (
@@ -206,7 +206,7 @@ export function LoopMonitorPage() {
 					</div>
 				) : loops.length === 0 ? (
 					<div className="text-center p-10 bg-[#1a1b2e]/50 border border-[#2a2b4a] rounded-xl text-gray-400 border-dashed">
-						No loops configured. Create one above to start automated monitoring.
+						暂无循环配置。请先在上方创建循环后开始自动监控。
 					</div>
 				) : (
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">

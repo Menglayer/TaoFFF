@@ -244,7 +244,11 @@ async function main() {
 		try {
 			const opps = spreadEngine.detectOpportunities()
 			engine.setOpportunities(opps)
-			await oppRepo.insertBatch(opps)
+			try {
+				await oppRepo.insertBatch(opps)
+			} catch (err) {
+				app.log.error({ err }, "Opportunity persistence failed")
+			}
 			alertEngine.evaluate(engine.getAllRates(), opps)
 			await loopEngine.tick()
 		} catch (err) {

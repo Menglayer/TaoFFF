@@ -131,7 +131,7 @@ export function TradingPage() {
 			{/* Header */}
 			<div className="flex items-center justify-between">
 				<h1 className="text-2xl font-bold tracking-tight text-gray-100 flex items-center gap-3">
-					Trading
+					交易面板
 				</h1>
 				<select
 					className="bg-gray-900 border border-gray-700 text-white rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
@@ -139,7 +139,7 @@ export function TradingPage() {
 					onChange={(e) => setSymbol(e.target.value)}
 				>
 					<option value="" disabled>
-						Select Symbol
+						选择交易对
 					</option>
 					{symbols.map((s) => (
 						<option key={s} value={s}>
@@ -153,19 +153,19 @@ export function TradingPage() {
 				{/* Left Panel: Order Form */}
 				<div className="lg:col-span-1 bg-gray-900/50 border border-gray-800 rounded-xl p-6 shadow-2xl backdrop-blur-sm flex flex-col gap-6">
 					<div>
-						<h2 className="text-lg font-semibold text-white mb-4">Order Panel</h2>
+						<h2 className="text-lg font-semibold text-white mb-4">下单参数</h2>
 
 						{/* Direction / Exchanges */}
 						<div className="flex flex-col gap-4">
 							<div className="flex justify-between items-center">
-								<span className="text-gray-400 font-medium text-sm w-16">Long</span>
+								<span className="text-gray-400 font-medium text-sm w-16">做多</span>
 								<select
 									className="flex-1 bg-gray-950 border border-gray-800 text-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500 transition-colors"
 									value={longExchange || ""}
 									onChange={(e) => setLongExchange(e.target.value as Exchange)}
 								>
 									<option value="" disabled>
-										Select Exchange
+										选择交易所
 									</option>
 									{EXCHANGES.map((ex) => (
 										<option key={ex} value={ex} disabled={ex === shortExchange}>
@@ -176,14 +176,14 @@ export function TradingPage() {
 							</div>
 
 							<div className="flex justify-between items-center">
-								<span className="text-gray-400 font-medium text-sm w-16">Short</span>
+								<span className="text-gray-400 font-medium text-sm w-16">做空</span>
 								<select
 									className="flex-1 bg-gray-950 border border-gray-800 text-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500 transition-colors"
 									value={shortExchange || ""}
 									onChange={(e) => setShortExchange(e.target.value as Exchange)}
 								>
 									<option value="" disabled>
-										Select Exchange
+										选择交易所
 									</option>
 									{EXCHANGES.map((ex) => (
 										<option key={ex} value={ex} disabled={ex === longExchange}>
@@ -197,7 +197,7 @@ export function TradingPage() {
 
 					{/* Size */}
 					<div>
-						<label className="text-gray-400 font-medium text-sm block mb-2">Size (USDT)</label>
+						<label className="text-gray-400 font-medium text-sm block mb-2">仓位金额 (USDT)</label>
 						<input
 							type="number"
 							min="10"
@@ -211,7 +211,7 @@ export function TradingPage() {
 					{/* Leverage Slider */}
 					<div>
 						<div className="flex justify-between items-center mb-2">
-							<label className="text-gray-400 font-medium text-sm">Leverage</label>
+							<label className="text-gray-400 font-medium text-sm">杠杆</label>
 							<span className="text-blue-400 font-bold">{leverage}x</span>
 						</div>
 						<input
@@ -228,24 +228,24 @@ export function TradingPage() {
 					{/* Fee Preview */}
 					<div className="bg-gray-950/60 border border-gray-800/80 rounded-lg p-4 flex flex-col gap-2 mt-2">
 						<h3 className="text-xs uppercase text-gray-500 font-bold tracking-wider mb-1">
-							Fee Preview
+							费用预估
 						</h3>
 						{preview ? (
 							<>
 								<div className="flex justify-between text-sm">
-									<span className="text-gray-400">Trading Fee</span>
+									<span className="text-gray-400">交易手续费</span>
 									<span className="text-gray-300">{(preview.tradingFee * 100).toFixed(2)}%</span>
 								</div>
 								<div className="flex justify-between text-sm">
-									<span className="text-gray-400">Slippage</span>
+									<span className="text-gray-400">滑点</span>
 									<span className="text-gray-300">{(preview.slippage * 100).toFixed(2)}%</span>
 								</div>
 								<div className="flex justify-between text-sm mt-2 pt-2 border-t border-gray-800/50">
-									<span className="text-gray-400">Gross APR</span>
+									<span className="text-gray-400">毛年化</span>
 									<span className="text-gray-300">{preview.grossApr.toFixed(2)}%</span>
 								</div>
 								<div className="flex justify-between text-sm font-semibold">
-									<span className="text-blue-400">Net APR</span>
+									<span className="text-blue-400">净年化</span>
 									<span className={preview.netApr >= 0 ? "text-green-400" : "text-red-400"}>
 										{preview.netApr.toFixed(2)}%
 									</span>
@@ -253,7 +253,7 @@ export function TradingPage() {
 							</>
 						) : (
 							<div className="text-sm text-gray-500 italic py-2">
-								Select symbol and exchanges to preview APR
+								请选择交易对和交易所后查看年化预估
 							</div>
 						)}
 					</div>
@@ -270,7 +270,7 @@ export function TradingPage() {
 									: "bg-blue-600/50 text-white/50 cursor-not-allowed border border-blue-500/20"
 							}`}
 						>
-							{phase === "executing" ? "Executing..." : "Execute Trade"}
+							{phase === "executing" ? "执行中..." : "执行交易"}
 						</button>
 					</div>
 				</div>
@@ -281,7 +281,7 @@ export function TradingPage() {
 						{/* Long Exchange Orderbook */}
 						<div className="flex flex-col gap-2">
 							<h3 className="text-sm text-gray-400 uppercase font-bold tracking-wider mb-1 px-1">
-								Long Leg
+								多头腿
 							</h3>
 							{longExchange ? (
 								bbo[longExchange] ? (
@@ -291,7 +291,7 @@ export function TradingPage() {
 								)
 							) : (
 								<div className="border border-gray-800 border-dashed rounded-xl flex items-center justify-center p-8 text-gray-500 text-sm bg-gray-900/20 h-full min-h-[160px]">
-									Select long exchange
+									请选择做多交易所
 								</div>
 							)}
 						</div>
@@ -299,7 +299,7 @@ export function TradingPage() {
 						{/* Short Exchange Orderbook */}
 						<div className="flex flex-col gap-2">
 							<h3 className="text-sm text-gray-400 uppercase font-bold tracking-wider mb-1 px-1">
-								Short Leg
+								空头腿
 							</h3>
 							{shortExchange ? (
 								bbo[shortExchange] ? (
@@ -309,7 +309,7 @@ export function TradingPage() {
 								)
 							) : (
 								<div className="border border-gray-800 border-dashed rounded-xl flex items-center justify-center p-8 text-gray-500 text-sm bg-gray-900/20 h-full min-h-[160px]">
-									Select short exchange
+									请选择做空交易所
 								</div>
 							)}
 						</div>
@@ -318,7 +318,7 @@ export function TradingPage() {
 					{/* Active Positions */}
 					<div className="bg-gray-900/50 border border-gray-800 rounded-xl p-6 shadow-xl flex-1 mt-4 flex flex-col">
 						<h2 className="text-lg font-semibold text-white mb-6 border-b border-gray-800 pb-3">
-							Active Positions
+							当前持仓
 						</h2>
 						{positions.length > 0 ? (
 							<div className="overflow-x-auto">
@@ -326,25 +326,25 @@ export function TradingPage() {
 									<thead>
 										<tr>
 											<th className="pb-3 text-xs text-gray-500 uppercase tracking-wider font-medium">
-												Symbol
+												交易对
 											</th>
 											<th className="pb-3 text-xs text-gray-500 uppercase tracking-wider font-medium">
-												Long / Short
+												多 / 空
 											</th>
 											<th className="pb-3 text-xs text-gray-500 uppercase tracking-wider font-medium">
-												Size
+												仓位
 											</th>
 											<th className="pb-3 text-xs text-gray-500 uppercase tracking-wider font-medium">
-												Entry Price (L/S)
+												开仓价 (多/空)
 											</th>
 											<th className="pb-3 text-xs text-gray-500 uppercase tracking-wider font-medium">
-												Net APR
+												净年化
 											</th>
 											<th className="pb-3 text-xs text-gray-500 uppercase tracking-wider font-medium">
-												Status
+												状态
 											</th>
 											<th className="pb-3 text-xs text-gray-500 uppercase tracking-wider font-medium text-right">
-												Action
+												操作
 											</th>
 										</tr>
 									</thead>
@@ -375,7 +375,11 @@ export function TradingPage() {
 												</td>
 												<td className="py-4">
 													<span className="inline-flex items-center rounded-full bg-green-400/10 px-2 py-1 text-xs font-medium text-green-400 border border-green-400/20">
-														{pos.status.toUpperCase()}
+														{pos.status === "open"
+															? "持有中"
+															: pos.status === "closed"
+																? "已平仓"
+																: pos.status.toUpperCase()}
 													</span>
 												</td>
 												<td className="py-4 text-right">
@@ -384,7 +388,7 @@ export function TradingPage() {
 														onClick={() => closeTrade(pos.id)}
 														className="text-red-400 hover:text-red-300 text-sm font-medium transition-colors border border-red-400/20 hover:bg-red-400/10 px-3 py-1 rounded"
 													>
-														Close
+														平仓
 													</button>
 												</td>
 											</tr>
@@ -408,8 +412,8 @@ export function TradingPage() {
 										d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
 									/>
 								</svg>
-								<p className="text-sm">No active positions yet.</p>
-								<p className="text-xs mt-1 text-gray-600">Execute a trade to see positions here.</p>
+								<p className="text-sm">暂无持仓记录。</p>
+								<p className="text-xs mt-1 text-gray-600">执行交易后会在这里显示持仓。</p>
 							</div>
 						)}
 					</div>

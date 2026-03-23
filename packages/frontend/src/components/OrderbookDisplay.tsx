@@ -37,20 +37,20 @@ export function OrderbookDisplay({
 					{exchange}
 				</div>
 				<div className="flex items-center gap-2 text-xs text-gray-400">
-					{bbo && <span>{age > 60000 ? ">1m ago" : `${Math.floor(age / 1000)}s ago`}</span>}
+					{bbo && <span>{age > 60000 ? ">1 分钟前" : `${Math.floor(age / 1000)} 秒前`}</span>}
 					<div className={`w-2 h-2 rounded-full ${dotColor}`} />
 				</div>
 			</div>
 
 			{!bbo ? (
 				<div className="flex-1 flex items-center justify-center text-gray-500 text-sm py-8">
-					Orderbook data unavailable
+					订单簿数据不可用
 				</div>
 			) : (
 				<div className="flex flex-col gap-2 font-mono text-sm">
 					<div className="grid grid-cols-2 text-gray-400 text-xs uppercase mb-1 border-b border-gray-800/50 pb-2">
-						<span>Price</span>
-						<span className="text-right">Size</span>
+						<span>价格</span>
+						<span className="text-right">数量</span>
 					</div>
 
 					{/* ASK */}
@@ -61,7 +61,7 @@ export function OrderbookDisplay({
 
 					{/* SPREAD */}
 					<div className="text-center text-xs text-gray-500 py-1 border-y border-gray-800/30">
-						Spread: {Math.abs(bbo.bestAsk - bbo.bestBid).toFixed(4)}
+						价差：{Math.abs(bbo.bestAsk - bbo.bestBid).toFixed(4)}
 					</div>
 
 					{/* BID */}
