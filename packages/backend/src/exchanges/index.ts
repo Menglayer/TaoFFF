@@ -5,7 +5,6 @@ import type { BaseExchange } from "./base"
 import { BinanceExchange } from "./binance"
 import { BitgetExchange } from "./bitget"
 import { BybitExchange } from "./bybit"
-import { CoinbaseExchange } from "./coinbase"
 import { EdgeXExchange } from "./edgex"
 import { ExtendedExchange } from "./extended"
 import { GateExchange } from "./gate"
@@ -21,7 +20,6 @@ export { BaseExchange } from "./base"
 
 const exchangeMap: Partial<Record<Exchange, () => BaseExchange>> = {
 	[Exchange.Binance]: () => new BinanceExchange(),
-	[Exchange.Coinbase]: () => new CoinbaseExchange(),
 	[Exchange.OKX]: () => new OKXExchange(),
 	[Exchange.Bybit]: () => new BybitExchange(),
 	[Exchange.Bitget]: () => new BitgetExchange(),
@@ -51,7 +49,6 @@ export function createExchange(id: Exchange): BaseExchange {
 export function createAllExchanges(): BaseExchange[] {
 	const enabledExchanges: Exchange[] = [
 		Exchange.Binance,
-		Exchange.Coinbase,
 		Exchange.OKX,
 		Exchange.Bybit,
 		Exchange.Bitget,
