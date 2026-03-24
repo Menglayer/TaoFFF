@@ -3,7 +3,7 @@ import { Exchange, OrderMode, OrderSequence, PositionSide } from "@taofff/shared
 import type { FastifyInstance } from "fastify"
 import type { FundingEngine } from "../core/funding-engine"
 import type { OrderExecutor } from "../core/order-executor"
-import type { TradeHistoryRepository } from "../db/repositories"
+import { mapRowToHedgeTrade, type TradeHistoryRepository } from "../db/repositories"
 
 function validateExchange(value: string): Exchange {
 	const valid = Object.values(Exchange) as string[]
@@ -132,7 +132,8 @@ export async function registerTradeRoutes(
 
 	// GET /api/trade/positions — active open positions
 	app.get("/api/trade/positions", async () => {
-		return tradeRepo.getOpenPositions()
+		const rows = await tradeRepo.getOpenPositions()
+		return rows.map(mapRowToHedgeTrade)
 	})
 
 	// GET /api/trade/history — all trades
@@ -140,6 +141,7 @@ export async function registerTradeRoutes(
 		Querystring: { limit?: string }
 	}>("/api/trade/history", async (req) => {
 		const limit = req.query.limit ? Number(req.query.limit) : 100
-		return tradeRepo.getHistory(limit)
+		const rows = await tradeRepo.getHistory(limit)
+		return rows.map(mapRowToHedgeTrade)
 	})
 }

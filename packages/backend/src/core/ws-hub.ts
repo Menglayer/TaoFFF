@@ -1,6 +1,7 @@
 import type {
 	AlertEvent,
 	LoopConfig,
+	SimPositionSnapshot,
 	WsAlertMessage,
 	WsClientMessage,
 	WsDeltaMessage,
@@ -9,6 +10,15 @@ import type {
 } from "@taofff/shared"
 import type { WebSocket } from "ws"
 import type { FundingEngine } from "./funding-engine"
+
+interface SimProviderResult {
+	simPositions: SimPositionSnapshot[]
+	simBalance: {
+		currentBalance: number
+		reservedMargin: number
+		availableBalance: number
+	} | null
+}
 
 interface WsClient {
 	ws: WebSocket
@@ -21,6 +31,7 @@ export class WsHub {
 	private broadcastTimer: ReturnType<typeof setInterval> | null = null
 	private snapshotTimer: ReturnType<typeof setInterval> | null = null
 	private loopProvider: (() => LoopConfig[]) | null = null
+	private simProvider: (() => Promise<SimProviderResult>) | null = null
 	private lastLoopsStr: string = "[]"
 
 	constructor(
@@ -31,6 +42,10 @@ export class WsHub {
 
 	setLoopProvider(provider: () => LoopConfig[]): void {
 		this.loopProvider = provider
+	}
+
+	setSimProvider(provider: () => Promise<SimProviderResult>): void {
+		this.simProvider = provider
 	}
 
 	/** Add a new WebSocket connection */
@@ -124,7 +139,16 @@ export class WsHub {
 			loops: this.loopProvider ? this.loopProvider() : [],
 			ts: Date.now(),
 		}
-		this.send(client.ws, msg)
+
+		if (this.simProvider) {
+			void this.simProvider().then((sim) => {
+				msg.simPositions = sim.simPositions
+				msg.simBalance = sim.simBalance ?? undefined
+				this.send(client.ws, msg)
+			})
+		} else {
+			this.send(client.ws, msg)
+		}
 	}
 
 	private broadcastFullSnapshot(): void {
@@ -144,18 +168,39 @@ export class WsHub {
 			this.lastLoopsStr = currentLoopsStr
 		}
 
-		if (!delta && !loopsChanged) return
+		// Always broadcast when sim provider is present (sim data changes every tick)
+		if (!delta && !loopsChanged && !this.simProvider) return
 
-		for (const client of this.clients.values()) {
-			const msg: WsDeltaMessage = {
-				type: "delta",
-				rates: delta?.rates ? this.filterRates(delta.rates, client.subscribedSymbols) : undefined,
-				opportunities: delta?.opportunities,
-				statuses: delta?.statuses,
-				loops: loopsChanged ? loops : undefined,
-				ts: Date.now(),
+		if (this.simProvider) {
+			void this.simProvider().then((sim) => {
+				for (const client of this.clients.values()) {
+					const msg: WsDeltaMessage = {
+						type: "delta",
+						rates: delta?.rates
+							? this.filterRates(delta.rates, client.subscribedSymbols)
+							: undefined,
+						opportunities: delta?.opportunities,
+						statuses: delta?.statuses,
+						loops: loopsChanged ? loops : undefined,
+						simPositions: sim.simPositions,
+						simBalance: sim.simBalance ?? undefined,
+						ts: Date.now(),
+					}
+					this.send(client.ws, msg)
+				}
+			})
+		} else {
+			for (const client of this.clients.values()) {
+				const msg: WsDeltaMessage = {
+					type: "delta",
+					rates: delta?.rates ? this.filterRates(delta.rates, client.subscribedSymbols) : undefined,
+					opportunities: delta?.opportunities,
+					statuses: delta?.statuses,
+					loops: loopsChanged ? loops : undefined,
+					ts: Date.now(),
+				}
+				this.send(client.ws, msg)
 			}
-			this.send(client.ws, msg)
 		}
 	}
 

@@ -1,3 +1,4 @@
+import type { SimPositionSnapshot } from "@taofff/shared"
 import {
 	computeBorrowCostApr,
 	computeEntryExitCostPct,
@@ -14,6 +15,7 @@ import { OrderbookDisplay } from "../components/OrderbookDisplay"
 import { SkeletonTable } from "../components/Skeleton"
 import { useOrderStore } from "../stores/orderStore"
 import { useRateStore } from "../stores/rateStore"
+import { useSimStore } from "../stores/simStore"
 import { useTradeStore } from "../stores/tradeStore"
 import { ALL_EXCHANGES, EXCHANGE_DISPLAY_NAME } from "../utils/exchange"
 
@@ -38,6 +40,14 @@ export function TradingPage() {
 
 	const { rates, connect, disconnect } = useRateStore()
 	const { positions, fetchPositions, requestTrade, closeTrade, phase } = useTradeStore()
+	const {
+		balance: simBalance,
+		positions: simPositions,
+		openSimTrade,
+		closeSimTrade,
+		connect: connectSim,
+		phase: simPhase,
+	} = useSimStore()
 
 	// Initialize from URL params on mount
 	useEffect(() => {
@@ -51,9 +61,10 @@ export function TradingPage() {
 	// Connect to WS and fetch positions
 	useEffect(() => {
 		connect()
+		connectSim()
 		fetchPositions()
 		return () => disconnect()
-	}, [connect, disconnect, fetchPositions])
+	}, [connect, connectSim, disconnect, fetchPositions])
 
 	// Get available symbols from rateStore
 	const symbols = useMemo(() => Object.keys(rates).sort(), [rates])
@@ -125,6 +136,32 @@ export function TradingPage() {
 			leverage,
 		})
 	}
+
+	const handleSimExecute = () => {
+		if (!isTradeValid) return
+		openSimTrade({
+			symbol: selectedSymbol,
+			longExchange,
+			shortExchange,
+			sizeUsdt,
+			leverage,
+		})
+	}
+
+	// Merge real and sim positions for unified display
+	const mergedPositions = useMemo(() => {
+		const real = positions.map((pos) => ({
+			type: "real" as const,
+			trade: pos,
+			snapshot: null as SimPositionSnapshot | null,
+		}))
+		const sim = simPositions.map((snap) => ({
+			type: "sim" as const,
+			trade: snap.trade,
+			snapshot: snap,
+		}))
+		return [...real, ...sim]
+	}, [positions, simPositions])
 
 	return (
 		<div className="flex flex-col h-full space-y-6 animate-in fade-in duration-500 p-6">
@@ -272,11 +309,64 @@ export function TradingPage() {
 						>
 							{phase === "executing" ? "执行中..." : "执行交易"}
 						</button>
+						<button
+							type="button"
+							disabled={!isTradeValid || simPhase === "executing"}
+							onClick={handleSimExecute}
+							className={`w-full font-semibold py-3 rounded-lg transition-all mt-2 ${
+								isTradeValid
+									? "bg-amber-600 hover:bg-amber-500 text-white shadow-[0_0_15px_rgba(217,119,6,0.4)]"
+									: "bg-amber-600/50 text-white/50 cursor-not-allowed border border-amber-500/20"
+							}`}
+						>
+							{simPhase === "executing" ? "模拟中..." : "模拟开仓"}
+						</button>
 					</div>
 				</div>
 
 				{/* Right Panel: Orderbooks & Positions */}
 				<div className="lg:col-span-2 flex flex-col gap-6">
+					{/* Sim Balance Card */}
+					{simBalance && (
+						<div className="bg-gray-900/50 border border-amber-800/50 rounded-xl p-4 shadow-xl">
+							<div className="flex items-center gap-2 mb-3">
+								<span className="px-2 py-0.5 rounded text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
+									SIM
+								</span>
+								<h3 className="text-sm font-semibold text-gray-300">模拟账户</h3>
+							</div>
+							<div className="grid grid-cols-3 gap-4">
+								<div>
+									<p className="text-xs text-gray-500">总余额</p>
+									<p className="text-sm font-bold text-white">
+										$
+										{simBalance.currentBalance.toLocaleString(undefined, {
+											maximumFractionDigits: 2,
+										})}
+									</p>
+								</div>
+								<div>
+									<p className="text-xs text-gray-500">已用保证金</p>
+									<p className="text-sm font-bold text-amber-400">
+										$
+										{simBalance.reservedMargin.toLocaleString(undefined, {
+											maximumFractionDigits: 2,
+										})}
+									</p>
+								</div>
+								<div>
+									<p className="text-xs text-gray-500">可用余额</p>
+									<p className="text-sm font-bold text-green-400">
+										$
+										{simBalance.availableBalance.toLocaleString(undefined, {
+											maximumFractionDigits: 2,
+										})}
+									</p>
+								</div>
+							</div>
+						</div>
+					)}
+
 					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 						{/* Long Exchange Orderbook */}
 						<div className="flex flex-col gap-2">
@@ -320,11 +410,14 @@ export function TradingPage() {
 						<h2 className="text-lg font-semibold text-white mb-6 border-b border-gray-800 pb-3">
 							当前持仓
 						</h2>
-						{positions.length > 0 ? (
+						{mergedPositions.length > 0 ? (
 							<div className="overflow-x-auto">
 								<table className="w-full text-left">
 									<thead>
 										<tr>
+											<th className="pb-3 text-xs text-gray-500 uppercase tracking-wider font-medium">
+												类型
+											</th>
 											<th className="pb-3 text-xs text-gray-500 uppercase tracking-wider font-medium">
 												交易对
 											</th>
@@ -341,6 +434,9 @@ export function TradingPage() {
 												净年化
 											</th>
 											<th className="pb-3 text-xs text-gray-500 uppercase tracking-wider font-medium">
+												浮动盈亏
+											</th>
+											<th className="pb-3 text-xs text-gray-500 uppercase tracking-wider font-medium">
 												状态
 											</th>
 											<th className="pb-3 text-xs text-gray-500 uppercase tracking-wider font-medium text-right">
@@ -349,50 +445,82 @@ export function TradingPage() {
 										</tr>
 									</thead>
 									<tbody className="divide-y divide-gray-800/50">
-										{positions.map((pos) => (
-											<tr key={pos.id} className="hover:bg-gray-800/30 transition-colors">
-												<td className="py-4 text-sm font-bold text-gray-200">{pos.symbol}</td>
-												<td className="py-4 text-sm text-gray-400">
-													<span className="text-green-400">{pos.legA.exchange}</span>
-													<span className="mx-1 text-gray-600">/</span>
-													<span className="text-red-400">{pos.legB.exchange}</span>
-												</td>
-												<td className="py-4 text-sm text-gray-300">
-													$
-													{(pos.legA.size * pos.legA.entryPrice).toLocaleString(undefined, {
-														maximumFractionDigits: 2,
-													})}
-													<span className="ml-1 text-xs text-blue-400 bg-blue-400/10 px-1 rounded">
-														{pos.legA.leverage}x
-													</span>
-												</td>
-												<td className="py-4 text-sm text-gray-400">
-													{pos.legA.entryPrice.toFixed(4)} <span className="text-gray-600">/</span>{" "}
-													{pos.legB.entryPrice.toFixed(4)}
-												</td>
-												<td className="py-4 text-sm font-medium text-green-400">
-													{pos.netAprAtEntry.toFixed(2)}%
-												</td>
-												<td className="py-4">
-													<span className="inline-flex items-center rounded-full bg-green-400/10 px-2 py-1 text-xs font-medium text-green-400 border border-green-400/20">
-														{pos.status === "open"
-															? "持有中"
-															: pos.status === "closed"
-																? "已平仓"
-																: pos.status.toUpperCase()}
-													</span>
-												</td>
-												<td className="py-4 text-right">
-													<button
-														type="button"
-														onClick={() => closeTrade(pos.id)}
-														className="text-red-400 hover:text-red-300 text-sm font-medium transition-colors border border-red-400/20 hover:bg-red-400/10 px-3 py-1 rounded"
-													>
-														平仓
-													</button>
-												</td>
-											</tr>
-										))}
+										{mergedPositions.map((item) => {
+											const pos = item.trade
+											const isSim = item.type === "sim"
+											const unrealizedPnl = item.snapshot?.unrealizedPnlTotal ?? null
+											return (
+												<tr key={pos.id} className="hover:bg-gray-800/30 transition-colors">
+													<td className="py-4">
+														{isSim ? (
+															<span className="px-2 py-0.5 rounded text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
+																SIM
+															</span>
+														) : (
+															<span className="px-2 py-0.5 rounded text-xs font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30">
+																真实
+															</span>
+														)}
+													</td>
+													<td className="py-4 text-sm font-bold text-gray-200">{pos.symbol}</td>
+													<td className="py-4 text-sm text-gray-400">
+														<span className="text-green-400">{pos.legA.exchange}</span>
+														<span className="mx-1 text-gray-600">/</span>
+														<span className="text-red-400">{pos.legB.exchange}</span>
+													</td>
+													<td className="py-4 text-sm text-gray-300">
+														$
+														{(pos.legA.size * pos.legA.entryPrice).toLocaleString(undefined, {
+															maximumFractionDigits: 2,
+														})}
+														<span className="ml-1 text-xs text-blue-400 bg-blue-400/10 px-1 rounded">
+															{pos.legA.leverage}x
+														</span>
+													</td>
+													<td className="py-4 text-sm text-gray-400">
+														{pos.legA.entryPrice.toFixed(4)}{" "}
+														<span className="text-gray-600">/</span>{" "}
+														{pos.legB.entryPrice.toFixed(4)}
+													</td>
+													<td className="py-4 text-sm font-medium text-green-400">
+														{pos.netAprAtEntry.toFixed(2)}%
+													</td>
+													<td className="py-4 text-sm font-medium">
+														{unrealizedPnl !== null ? (
+															<span
+																className={unrealizedPnl >= 0 ? "text-green-400" : "text-red-400"}
+															>
+																${unrealizedPnl.toFixed(4)}
+															</span>
+														) : (
+															<span className="text-gray-600">—</span>
+														)}
+													</td>
+													<td className="py-4">
+														<span className="inline-flex items-center rounded-full bg-green-400/10 px-2 py-1 text-xs font-medium text-green-400 border border-green-400/20">
+															{pos.status === "open"
+																? "持有中"
+																: pos.status === "closed"
+																	? "已平仓"
+																	: pos.status.toUpperCase()}
+														</span>
+													</td>
+													<td className="py-4 text-right">
+														<button
+															type="button"
+															onClick={() => (isSim ? closeSimTrade(pos.id) : closeTrade(pos.id))}
+															className={`text-sm font-medium transition-colors px-3 py-1 rounded ${
+																isSim
+																	? "text-amber-400 hover:text-amber-300 border border-amber-400/20 hover:bg-amber-400/10"
+																	: "text-red-400 hover:text-red-300 border border-red-400/20 hover:bg-red-400/10"
+															}`}
+														>
+															{isSim ? "模拟平仓" : "平仓"}
+														</button>
+													</td>
+												</tr>
+											)
+										})}
 									</tbody>
 								</table>
 							</div>

@@ -160,6 +160,7 @@ export const tradeHistory = sqliteTable(
 		realizedPnl: real("realized_pnl"),
 		fundingEarned: real("funding_earned").notNull().default(0),
 		status: text("status").notNull().default("open"),
+		simulated: integer("simulated", { mode: "boolean" }).notNull().default(false),
 		openedAt: integer("opened_at").notNull(),
 		closedAt: integer("closed_at"),
 	},
@@ -169,6 +170,19 @@ export const tradeHistory = sqliteTable(
 		openedAtIdx: index("th_opened_at_idx").on(table.openedAt),
 	}),
 )
+
+/** Simulated balance for paper trading */
+export const simBalance = sqliteTable("sim_balance", {
+	id: text("id").primaryKey(),
+	initialBalance: real("initial_balance").notNull().default(100000),
+	currentBalance: real("current_balance").notNull().default(100000),
+	reservedMargin: real("reserved_margin").notNull().default(0),
+	totalRealizedPnl: real("total_realized_pnl").notNull().default(0),
+	totalFundingEarned: real("total_funding_earned").notNull().default(0),
+	totalFeesSpent: real("total_fees_spent").notNull().default(0),
+	createdAt: integer("created_at").notNull().default(sql`(unixepoch() * 1000)`),
+	updatedAt: integer("updated_at").notNull().default(sql`(unixepoch() * 1000)`),
+})
 
 /** Automated spread monitoring loops */
 export const loopConfigs = sqliteTable("loop_configs", {

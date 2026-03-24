@@ -78,3 +78,21 @@ export const LoopConfigInputSchema = z.object({
 	leverage: z.number().int().min(1).max(125),
 	sequence: z.nativeEnum(OrderSequence),
 })
+
+// ─── Simulation Schemas ───
+
+export const SimOpenTradeRequestSchema = z.object({
+	symbol: z.string().min(1),
+	longExchange: z.nativeEnum(Exchange),
+	shortExchange: z.nativeEnum(Exchange),
+	sizeUsdt: z.number().positive(),
+	leverage: z.number().int().min(1).max(125),
+})
+
+export const SimCloseTradeRequestSchema = z.object({
+	tradeId: z.string().min(1),
+})
+
+export const SimBalanceResetSchema = z.object({
+	initialBalance: z.number().positive().default(100000),
+})

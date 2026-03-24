@@ -116,3 +116,70 @@ export function computeNetApr(params: {
 	)
 	return leveragedApr - borrowCostApr - tradingCostApr
 }
+
+// ─── Simulation Formulas ───
+
+/**
+ * Compute unrealized P&L for a single leg.
+ *
+ * @param entryPrice - Entry price of the position
+ * @param markPrice - Current mark price
+ * @param size - Position size in base currency
+ * @param side - "long" or "short"
+ * @returns Unrealized P&L in quote currency (USDT)
+ */
+export function computeUnrealizedPnl(
+	entryPrice: number,
+	markPrice: number,
+	size: number,
+	side: "long" | "short",
+): number {
+	if (side === "long") {
+		return (markPrice - entryPrice) * size
+	}
+	return (entryPrice - markPrice) * size
+}
+
+/**
+ * Compute simulated fill price with slippage applied.
+ *
+ * @param markPrice - Current mark price
+ * @param slippagePct - Slippage percentage (e.g., 0.02 = 0.02%)
+ * @param side - "long" (buy, price goes up) or "short" (sell, price goes down)
+ * @returns Simulated fill price after slippage
+ */
+export function computeSimFillPrice(
+	markPrice: number,
+	slippagePct: number,
+	side: "long" | "short",
+): number {
+	const slippageMultiplier = slippagePct / 100
+	if (side === "long") {
+		// Buying pushes price up
+		return markPrice * (1 + slippageMultiplier)
+	}
+	// Selling pushes price down
+	return markPrice * (1 - slippageMultiplier)
+}
+
+/**
+ * Compute simulated trading fees for a single leg.
+ *
+ * @param notionalUsdt - Notional value in USDT
+ * @param feePct - Fee percentage (e.g., 0.05 = 0.05%)
+ * @returns Fee amount in USDT
+ */
+export function computeSimFees(notionalUsdt: number, feePct: number): number {
+	return notionalUsdt * (feePct / 100)
+}
+
+/**
+ * Compute required margin for a position.
+ *
+ * @param sizeUsdt - Position size in USDT
+ * @param leverage - Leverage multiplier
+ * @returns Required margin in USDT
+ */
+export function computeRequiredMargin(sizeUsdt: number, leverage: number): number {
+	return sizeUsdt / leverage
+}

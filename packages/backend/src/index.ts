@@ -9,6 +9,9 @@ import { AlertEngine } from "./core/alert-engine"
 import { FundingEngine } from "./core/funding-engine"
 import { LoopEngine } from "./core/loop-engine"
 import { OrderExecutor } from "./core/order-executor"
+import { SimBalanceManager } from "./core/sim-balance-manager"
+import { SimFundingAccruer } from "./core/sim-funding-accruer"
+import { SimOrderExecutor } from "./core/sim-order-executor"
 import { SpreadEngine } from "./core/spread-engine"
 import { WsHub } from "./core/ws-hub"
 import { createDb } from "./db/client"
@@ -19,6 +22,7 @@ import {
 	ArbitrageOpportunityRepository,
 	FundingRateRepository,
 	LoopConfigRepository,
+	SimBalanceRepository,
 	TradeHistoryRepository,
 } from "./db/repositories"
 import { alertHistory, fundingRates, tradeHistory } from "./db/schema"
@@ -27,6 +31,7 @@ import { registerAlertRoutes } from "./web/alert-routes"
 import { registerExportRoutes } from "./web/export-routes"
 import { registerLoopRoutes } from "./web/loop-routes"
 import { registerRoutes } from "./web/routes"
+import { registerSimRoutes } from "./web/sim-routes"
 import { registerTradeRoutes } from "./web/trade-routes"
 import { registerWsHandler } from "./web/ws-handler"
 
@@ -50,6 +55,12 @@ async function main() {
 	const orderExecutor = new OrderExecutor(apiKeyRepo, config)
 	const alertEngine = new AlertEngine(alertRuleRepo, alertHistoryRepo, wsHub)
 	const loopEngine = new LoopEngine(spreadEngine, orderExecutor, tradeRepo, engine, config)
+
+	// Create simulation services
+	const simBalanceRepo = new SimBalanceRepository(db)
+	const simBalanceManager = new SimBalanceManager(simBalanceRepo)
+	const simExecutor = new SimOrderExecutor(engine, tradeRepo, simBalanceManager, config)
+	const simFundingAccruer = new SimFundingAccruer(tradeRepo, engine, simBalanceManager)
 
 	// Create Fastify instance
 	const app = Fastify({
@@ -81,6 +92,7 @@ async function main() {
 	await registerAlertRoutes(app, alertEngine, alertRuleRepo, alertHistoryRepo, rateRepo)
 	await registerExportRoutes(app, rateRepo, tradeRepo, oppRepo)
 	await registerLoopRoutes(app, loopEngine, loopRepo)
+	await registerSimRoutes(app, simExecutor, tradeRepo, simBalanceManager)
 
 	// Load alert rules
 	await alertEngine.loadRules()
@@ -98,6 +110,25 @@ async function main() {
 
 	// Set loop provider for WS
 	wsHub.setLoopProvider(() => loopEngine.getLoops())
+
+	// Set sim provider for WS
+	wsHub.setSimProvider(async () => {
+		const positions = await simExecutor.getPositionSnapshots()
+		const balance = await simBalanceManager.getBalance()
+		return {
+			simPositions: positions,
+			simBalance: balance
+				? {
+						currentBalance: balance.currentBalance,
+						reservedMargin: balance.reservedMargin,
+						availableBalance: balance.currentBalance - balance.reservedMargin,
+					}
+				: null,
+		}
+	})
+
+	// Initialize sim balance
+	await simBalanceManager.initialize()
 
 	// Start exchange adapters (configurable disable list for geo-blocked venues)
 	const disabled = new Set(config.disabledExchanges)
@@ -151,6 +182,13 @@ async function main() {
 			app.log.info("Stopped loop engine")
 		} catch (err) {
 			app.log.error({ err }, "Error stopping loop engine")
+		}
+
+		try {
+			simFundingAccruer.stop()
+			app.log.info("Stopped sim funding accruer")
+		} catch (err) {
+			app.log.error({ err }, "Error stopping sim funding accruer")
 		}
 
 		try {
@@ -238,6 +276,9 @@ async function main() {
 
 	// Start WS broadcasting
 	wsHub.start()
+
+	// Start sim funding accruer
+	simFundingAccruer.start()
 
 	// Detect and persist opportunities every 5 seconds
 	oppTimer = setInterval(async () => {

@@ -1,24 +1,28 @@
-import type { AlertEvent } from "@taofff/shared"
+import type { AlertEvent, HedgeTrade } from "@taofff/shared"
 import { ColorType, createChart, type LineData, LineSeries, type Time } from "lightweight-charts"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { SkeletonTable } from "../components/Skeleton"
+import { useSimStore } from "../stores/simStore"
 import { useTradeStore } from "../stores/tradeStore"
 
 const API = import.meta.env.DEV ? "http://localhost:8080" : ""
 
 type TabId = "trades" | "funding" | "alerts"
+type TradeFilter = "all" | "real" | "sim"
 
 export function HistoryPage() {
 	const [activeTab, setActiveTab] = useState<TabId>("trades")
 	const [isLoading, setIsLoading] = useState(true)
+	const [tradeFilter, setTradeFilter] = useState<TradeFilter>("all")
 
 	const { history, fetchHistory } = useTradeStore()
+	const { history: simHistory, fetchHistory: fetchSimHistory } = useSimStore()
 	const [alertEvents, setAlertEvents] = useState<AlertEvent[]>([])
 	const chartContainerRef = useRef<HTMLDivElement>(null)
 
 	useEffect(() => {
-		Promise.resolve(fetchHistory()).finally(() => setIsLoading(false))
-	}, [fetchHistory])
+		Promise.all([fetchHistory(), fetchSimHistory()]).finally(() => setIsLoading(false))
+	}, [fetchHistory, fetchSimHistory])
 
 	useEffect(() => {
 		if (activeTab === "alerts") {
@@ -28,6 +32,21 @@ export function HistoryPage() {
 				.catch(console.error)
 		}
 	}, [activeTab])
+
+	// Merge and filter history based on tradeFilter
+	const filteredHistory: HedgeTrade[] = useMemo(() => {
+		const realTrades = (history || []).map((t) => ({ ...t, simulated: false }))
+		const simTrades = (simHistory || []).map((t) => ({ ...t, simulated: true }))
+
+		switch (tradeFilter) {
+			case "real":
+				return realTrades
+			case "sim":
+				return simTrades
+			default:
+				return [...realTrades, ...simTrades].sort((a, b) => (b.openedAt ?? 0) - (a.openedAt ?? 0))
+		}
+	}, [history, simHistory, tradeFilter])
 
 	useEffect(() => {
 		if (activeTab !== "funding" || !chartContainerRef.current) return
@@ -52,7 +71,7 @@ export function HistoryPage() {
 			lineWidth: 2,
 		})
 
-		const trades = [...(history || [])].sort((a, b) => {
+		const trades = [...filteredHistory].sort((a, b) => {
 			const timeA = a.openedAt || 0
 			const timeB = b.openedAt || 0
 			return timeA - timeB
@@ -93,10 +112,10 @@ export function HistoryPage() {
 			window.removeEventListener("resize", handleResize)
 			chart.remove()
 		}
-	}, [activeTab, history])
+	}, [activeTab, filteredHistory])
 
 	const summary = useMemo(() => {
-		const trades = history || []
+		const trades = filteredHistory
 		const closed = trades.filter((t) => t.status === "closed")
 		const totalPnl = closed.reduce((sum, t) => sum + Number(t.realizedPnl ?? 0), 0)
 		const totalFunding = trades.reduce((sum, t) => sum + Number(t.fundingEarned ?? 0), 0)
@@ -113,7 +132,7 @@ export function HistoryPage() {
 				: 0
 
 		return { totalPnl, totalFunding, wins, winRate, avgHoldTime, tradeCount: closed.length }
-	}, [history])
+	}, [filteredHistory])
 
 	const formatDuration = (ms: number) => {
 		const seconds = Math.floor(ms / 1000)
@@ -123,28 +142,52 @@ export function HistoryPage() {
 	}
 
 	const renderTabs = () => (
-		<div className="flex border-b border-[#2a2b4a] mb-6">
-			<button
-				type="button"
-				className={`px-6 py-3 font-medium text-sm transition-colors ${activeTab === "trades" ? "text-indigo-400 border-b-2 border-indigo-500" : "text-gray-400 hover:text-white"}`}
-				onClick={() => setActiveTab("trades")}
-			>
-				交易历史
-			</button>
-			<button
-				type="button"
-				className={`px-6 py-3 font-medium text-sm transition-colors ${activeTab === "funding" ? "text-indigo-400 border-b-2 border-indigo-500" : "text-gray-400 hover:text-white"}`}
-				onClick={() => setActiveTab("funding")}
-			>
-				资金费收益
-			</button>
-			<button
-				type="button"
-				className={`px-6 py-3 font-medium text-sm transition-colors ${activeTab === "alerts" ? "text-indigo-400 border-b-2 border-indigo-500" : "text-gray-400 hover:text-white"}`}
-				onClick={() => setActiveTab("alerts")}
-			>
-				告警历史
-			</button>
+		<div className="flex items-center justify-between border-b border-[#2a2b4a] mb-6">
+			<div className="flex">
+				<button
+					type="button"
+					className={`px-6 py-3 font-medium text-sm transition-colors ${activeTab === "trades" ? "text-indigo-400 border-b-2 border-indigo-500" : "text-gray-400 hover:text-white"}`}
+					onClick={() => setActiveTab("trades")}
+				>
+					交易历史
+				</button>
+				<button
+					type="button"
+					className={`px-6 py-3 font-medium text-sm transition-colors ${activeTab === "funding" ? "text-indigo-400 border-b-2 border-indigo-500" : "text-gray-400 hover:text-white"}`}
+					onClick={() => setActiveTab("funding")}
+				>
+					资金费收益
+				</button>
+				<button
+					type="button"
+					className={`px-6 py-3 font-medium text-sm transition-colors ${activeTab === "alerts" ? "text-indigo-400 border-b-2 border-indigo-500" : "text-gray-400 hover:text-white"}`}
+					onClick={() => setActiveTab("alerts")}
+				>
+					告警历史
+				</button>
+			</div>
+			{activeTab !== "alerts" && (
+				<div className="flex items-center gap-1 mr-2">
+					{(["all", "real", "sim"] as const).map((f) => (
+						<button
+							key={f}
+							type="button"
+							onClick={() => setTradeFilter(f)}
+							className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+								tradeFilter === f
+									? f === "sim"
+										? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+										: f === "real"
+											? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+											: "bg-indigo-500/20 text-indigo-400 border border-indigo-500/30"
+									: "text-gray-500 hover:text-gray-300 border border-transparent"
+							}`}
+						>
+							{f === "all" ? "全部" : f === "real" ? "真实" : "模拟"}
+						</button>
+					))}
+				</div>
+			)}
 		</div>
 	)
 
@@ -187,6 +230,7 @@ export function HistoryPage() {
 					<table className="w-full text-left min-w-[800px]">
 						<thead className="bg-[#0d0e1a]/50 text-gray-400 text-xs uppercase tracking-wider border-b border-[#2a2b4a]">
 							<tr>
+								<th className="p-4 font-medium">类型</th>
 								<th className="p-4 font-medium">ID</th>
 								<th className="p-4 font-medium">交易对</th>
 								<th className="p-4 font-medium">做多交易所</th>
@@ -201,8 +245,9 @@ export function HistoryPage() {
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-[#2a2b4a] text-sm">
-							{history && history.length > 0 ? (
-								history.map((t) => {
+							{filteredHistory.length > 0 ? (
+								filteredHistory.map((t) => {
+									const isSim = !!t.simulated
 									const id = t.id?.substring(0, 8) || "---"
 									const symbol = t.symbol
 									const legA = t.legA || {}
@@ -234,6 +279,17 @@ export function HistoryPage() {
 
 									return (
 										<tr key={t.id} className="hover:bg-[#2a2b4a]/30 transition-colors">
+											<td className="p-4">
+												{isSim ? (
+													<span className="px-2 py-0.5 rounded text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
+														SIM
+													</span>
+												) : (
+													<span className="px-2 py-0.5 rounded text-xs font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30">
+														真实
+													</span>
+												)}
+											</td>
 											<td className="p-4 text-gray-500 font-mono">{id}</td>
 											<td className="p-4 font-medium text-white">{symbol}</td>
 											<td className="p-4 text-gray-300">{longEx}</td>
@@ -262,7 +318,7 @@ export function HistoryPage() {
 								})
 							) : (
 								<tr>
-									<td colSpan={11} className="p-8 text-center text-gray-500">
+									<td colSpan={12} className="p-8 text-center text-gray-500">
 										暂无交易历史。
 									</td>
 								</tr>
@@ -279,7 +335,7 @@ export function HistoryPage() {
 			{/* Chart */}
 			<div className="bg-[#1a1b2e] border border-[#2a2b4a] rounded-xl p-5">
 				<h3 className="text-white font-medium mb-4">累计资金费收益</h3>
-				{!history || history.filter((t) => (t.fundingEarned ?? 0) > 0).length === 0 ? (
+				{filteredHistory.filter((t) => (t.fundingEarned ?? 0) > 0).length === 0 ? (
 					<div className="h-[300px] flex items-center justify-center text-gray-500">
 						暂无资金费收益数据。
 					</div>
@@ -296,6 +352,7 @@ export function HistoryPage() {
 					<table className="w-full text-left min-w-[600px]">
 						<thead className="bg-[#0d0e1a]/50 text-gray-400 text-xs uppercase tracking-wider border-b border-[#2a2b4a]">
 							<tr>
+								<th className="p-4 font-medium">类型</th>
 								<th className="p-4 font-medium">交易对</th>
 								<th className="p-4 font-medium">做多交易所</th>
 								<th className="p-4 font-medium">做空交易所</th>
@@ -305,8 +362,9 @@ export function HistoryPage() {
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-[#2a2b4a] text-sm">
-							{history && history.length > 0 ? (
-								history.map((t) => {
+							{filteredHistory.length > 0 ? (
+								filteredHistory.map((t) => {
+									const isSim = !!t.simulated
 									const symbol = t.symbol
 									const legA = t.legA || {}
 									const legB = t.legB || {}
@@ -333,6 +391,17 @@ export function HistoryPage() {
 
 									return (
 										<tr key={t.id} className="hover:bg-[#2a2b4a]/30 transition-colors">
+											<td className="p-4">
+												{isSim ? (
+													<span className="px-2 py-0.5 rounded text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
+														SIM
+													</span>
+												) : (
+													<span className="px-2 py-0.5 rounded text-xs font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30">
+														真实
+													</span>
+												)}
+											</td>
 											<td className="p-4 font-medium text-white">{symbol}</td>
 											<td className="p-4 text-gray-300">{longEx}</td>
 											<td className="p-4 text-gray-300">{shortEx}</td>
@@ -354,7 +423,7 @@ export function HistoryPage() {
 								})
 							) : (
 								<tr>
-									<td colSpan={6} className="p-8 text-center text-gray-500">
+									<td colSpan={7} className="p-8 text-center text-gray-500">
 										暂无资金费数据。
 									</td>
 								</tr>

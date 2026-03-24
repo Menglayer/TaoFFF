@@ -4,6 +4,7 @@ import type {
 	ExchangeStatus,
 	FundingRateSnapshot,
 	LoopConfig,
+	SimPositionSnapshot,
 } from "./models"
 
 // ─── Server → Client Messages ───
@@ -14,6 +15,8 @@ export interface WsFullSnapshotMessage {
 	opportunities: ArbitrageOpportunity[]
 	statuses: ExchangeStatus[]
 	loops: LoopConfig[]
+	simPositions?: SimPositionSnapshot[]
+	simBalance?: { currentBalance: number; reservedMargin: number; availableBalance: number }
 	ts: number
 }
 
@@ -23,6 +26,8 @@ export interface WsDeltaMessage {
 	opportunities?: ArbitrageOpportunity[]
 	statuses?: Partial<ExchangeStatus>[]
 	loops?: Partial<LoopConfig>[]
+	simPositions?: SimPositionSnapshot[]
+	simBalance?: { currentBalance: number; reservedMargin: number; availableBalance: number }
 	ts: number
 }
 

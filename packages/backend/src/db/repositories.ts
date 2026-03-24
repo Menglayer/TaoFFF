@@ -10,6 +10,7 @@ import type {
 	LoopConfig,
 	LoopStatus,
 	OrderSequence,
+	PositionSide,
 } from "@taofff/shared"
 import { and, desc, eq, gte, lt, lte, sql } from "drizzle-orm"
 import type { AppDatabase } from "./client"
@@ -20,8 +21,46 @@ import {
 	exchangeApiKeys,
 	fundingRates,
 	loopConfigs,
+	simBalance,
 	tradeHistory,
 } from "./schema"
+
+/** Convert a flat DB row into a nested HedgeTrade object */
+export function mapRowToHedgeTrade(row: typeof tradeHistory.$inferSelect): HedgeTrade {
+	return {
+		id: row.id,
+		symbol: row.symbol,
+		legA: {
+			exchange: row.legAExchange as Exchange,
+			symbol: row.symbol,
+			side: row.legASide as PositionSide,
+			size: row.legASize,
+			entryPrice: row.legAEntryPrice,
+			exitPrice: row.legAExitPrice,
+			leverage: row.legALeverage,
+			fees: row.legAFees,
+			orderId: row.legAOrderId,
+		},
+		legB: {
+			exchange: row.legBExchange as Exchange,
+			symbol: row.symbol,
+			side: row.legBSide as PositionSide,
+			size: row.legBSize,
+			entryPrice: row.legBEntryPrice,
+			exitPrice: row.legBExitPrice,
+			leverage: row.legBLeverage,
+			fees: row.legBFees,
+			orderId: row.legBOrderId,
+		},
+		netAprAtEntry: row.netAprAtEntry,
+		realizedPnl: row.realizedPnl,
+		fundingEarned: row.fundingEarned,
+		status: row.status as HedgeTrade["status"],
+		openedAt: row.openedAt,
+		closedAt: row.closedAt,
+		simulated: row.simulated,
+	}
+}
 
 export class FundingRateRepository {
 	constructor(private db: AppDatabase) {}
@@ -241,6 +280,7 @@ export class TradeHistoryRepository {
 			realizedPnl: trade.realizedPnl,
 			fundingEarned: trade.fundingEarned,
 			status: trade.status,
+			simulated: trade.simulated ?? false,
 			openedAt: trade.openedAt,
 			closedAt: trade.closedAt,
 		})
@@ -263,24 +303,53 @@ export class TradeHistoryRepository {
 			.where(eq(tradeHistory.id, trade.id))
 	}
 
-	/** Get all open positions */
+	/** Get all open positions (real trades only) */
 	async getOpenPositions(): Promise<(typeof tradeHistory.$inferSelect)[]> {
 		return this.db
 			.select()
 			.from(tradeHistory)
-			.where(eq(tradeHistory.status, "open"))
+			.where(and(eq(tradeHistory.status, "open"), eq(tradeHistory.simulated, false)))
 			.orderBy(desc(tradeHistory.openedAt))
 	}
 
-	/** Get trade history (closed trades) */
+	/** Get trade history (real trades only) */
 	async getHistory(limit: number = 100) {
-		return this.db.select().from(tradeHistory).orderBy(desc(tradeHistory.openedAt)).limit(limit)
+		return this.db
+			.select()
+			.from(tradeHistory)
+			.where(eq(tradeHistory.simulated, false))
+			.orderBy(desc(tradeHistory.openedAt))
+			.limit(limit)
 	}
 
 	/** Get a single trade by ID */
 	async getById(id: string) {
 		const rows = await this.db.select().from(tradeHistory).where(eq(tradeHistory.id, id)).limit(1)
 		return rows[0] ?? null
+	}
+
+	/** Get all open simulated positions */
+	async getSimOpenPositions(): Promise<(typeof tradeHistory.$inferSelect)[]> {
+		return this.db
+			.select()
+			.from(tradeHistory)
+			.where(and(eq(tradeHistory.status, "open"), eq(tradeHistory.simulated, true)))
+			.orderBy(desc(tradeHistory.openedAt))
+	}
+
+	/** Get simulated trade history */
+	async getSimHistory(limit: number = 100) {
+		return this.db
+			.select()
+			.from(tradeHistory)
+			.where(eq(tradeHistory.simulated, true))
+			.orderBy(desc(tradeHistory.openedAt))
+			.limit(limit)
+	}
+
+	/** Delete all simulated trades (used during balance reset) */
+	async deleteAllSimTrades(): Promise<void> {
+		await this.db.delete(tradeHistory).where(eq(tradeHistory.simulated, true))
 	}
 }
 
@@ -535,5 +604,61 @@ export class LoopConfigRepository {
 			.where(eq(loopConfigs.id, id))
 			.returning({ id: loopConfigs.id })
 		return result.length > 0
+	}
+}
+
+export class SimBalanceRepository {
+	constructor(private db: AppDatabase) {}
+
+	async get(): Promise<typeof simBalance.$inferSelect | null> {
+		const rows = await this.db.select().from(simBalance).limit(1)
+		return rows[0] ?? null
+	}
+
+	async upsert(data: {
+		id: string
+		initialBalance: number
+		currentBalance: number
+		reservedMargin: number
+		totalRealizedPnl: number
+		totalFundingEarned: number
+		totalFeesSpent: number
+	}): Promise<void> {
+		const now = Date.now()
+		await this.db
+			.insert(simBalance)
+			.values({
+				...data,
+				createdAt: now,
+				updatedAt: now,
+			})
+			.onConflictDoUpdate({
+				target: simBalance.id,
+				set: {
+					initialBalance: sql`excluded.initial_balance`,
+					currentBalance: sql`excluded.current_balance`,
+					reservedMargin: sql`excluded.reserved_margin`,
+					totalRealizedPnl: sql`excluded.total_realized_pnl`,
+					totalFundingEarned: sql`excluded.total_funding_earned`,
+					totalFeesSpent: sql`excluded.total_fees_spent`,
+					updatedAt: sql`excluded.updated_at`,
+				},
+			})
+	}
+
+	async reset(initialBalance: number): Promise<void> {
+		await this.db.delete(simBalance)
+		const now = Date.now()
+		await this.db.insert(simBalance).values({
+			id: "default",
+			initialBalance,
+			currentBalance: initialBalance,
+			reservedMargin: 0,
+			totalRealizedPnl: 0,
+			totalFundingEarned: 0,
+			totalFeesSpent: 0,
+			createdAt: now,
+			updatedAt: now,
+		})
 	}
 }

@@ -145,6 +145,8 @@ export interface HedgeTrade {
 	status: "open" | "closed" | "partial"
 	openedAt: number
 	closedAt: number | null
+	/** Whether this is a simulated (paper) trade */
+	simulated?: boolean
 }
 
 /** Open trade request */
@@ -193,6 +195,31 @@ export interface AppSettings {
 	borrowRateDaily: number
 	rebalanceTimesPerYear: number
 	stalenessThresholdSeconds: number
+}
+
+/** Simulated balance record */
+export interface SimBalance {
+	id: string
+	initialBalance: number
+	currentBalance: number
+	reservedMargin: number
+	totalRealizedPnl: number
+	totalFundingEarned: number
+	totalFeesSpent: number
+	createdAt: number
+	updatedAt: number
+}
+
+/** Simulated position snapshot with live P&L (computed, not stored) */
+export interface SimPositionSnapshot {
+	trade: HedgeTrade
+	unrealizedPnlA: number
+	unrealizedPnlB: number
+	unrealizedPnlTotal: number
+	currentMarkPriceA: number
+	currentMarkPriceB: number
+	marginUsed: number
+	fundingAccrued: number
 }
 
 /** P&L summary */
