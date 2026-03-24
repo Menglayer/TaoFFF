@@ -1,9 +1,9 @@
-import { DEFAULTS } from "@taofff/shared"
+import { DEFAULTS, type Exchange } from "@taofff/shared"
 import { useMemo, useState } from "react"
 import { useRateStore } from "../stores/rateStore"
 import { OpportunityCard } from "./OpportunityCard"
 
-export function OpportunityPanel() {
+export function OpportunityPanel({ visibleExchanges }: { visibleExchanges?: Exchange[] }) {
 	const { opportunities } = useRateStore()
 	const [minNetApr, setMinNetApr] = useState<number>(DEFAULTS.MIN_NET_APR_PCT)
 
@@ -12,11 +12,19 @@ export function OpportunityPanel() {
 	const [isExpanded, setIsExpanded] = useState(true)
 
 	const filteredOpps = useMemo(() => {
-		return opportunities
+		let filtered = opportunities
+		// Filter by visible exchanges if provided
+		if (visibleExchanges) {
+			const visibleSet = new Set(visibleExchanges)
+			filtered = filtered.filter(
+				(opp) => visibleSet.has(opp.longExchange) && visibleSet.has(opp.shortExchange),
+			)
+		}
+		return filtered
 			.filter((opp) => opp.netApr >= minNetApr)
 			.sort((a, b) => b.netApr - a.netApr)
 			.slice(0, 20)
-	}, [opportunities, minNetApr])
+	}, [opportunities, minNetApr, visibleExchanges])
 
 	const bestNetApr =
 		opportunities.length > 0 ? Math.max(...opportunities.map((o) => o.netApr)).toFixed(2) : "0.00"

@@ -1,4 +1,4 @@
-import { type Exchange, DEFAULT_DISABLED_EXCHANGES, DataQuality } from "@taofff/shared"
+import { DataQuality, DEFAULT_DISABLED_EXCHANGES, type Exchange } from "@taofff/shared"
 import { useEffect, useMemo, useState } from "react"
 import { FilterBar } from "../components/FilterBar"
 import { OpportunityPanel } from "../components/OpportunityPanel"
@@ -51,19 +51,13 @@ export function FundingRatePage() {
 	const [enabledExchanges, setEnabledExchanges] = useState<Record<string, boolean>>(() => {
 		if (typeof window === "undefined") {
 			return Object.fromEntries(
-				ALL_EXCHANGES.map((exchange) => [
-					exchange,
-					!DEFAULT_DISABLED_EXCHANGES.includes(exchange),
-				]),
+				ALL_EXCHANGES.map((exchange) => [exchange, !DEFAULT_DISABLED_EXCHANGES.includes(exchange)]),
 			)
 		}
 		const saved = window.localStorage.getItem("taofff-enabled-exchanges")
 		if (!saved) {
 			return Object.fromEntries(
-				ALL_EXCHANGES.map((exchange) => [
-					exchange,
-					!DEFAULT_DISABLED_EXCHANGES.includes(exchange),
-				]),
+				ALL_EXCHANGES.map((exchange) => [exchange, !DEFAULT_DISABLED_EXCHANGES.includes(exchange)]),
 			)
 		}
 		try {
@@ -73,10 +67,7 @@ export function FundingRatePage() {
 			)
 		} catch {
 			return Object.fromEntries(
-				ALL_EXCHANGES.map((exchange) => [
-					exchange,
-					!DEFAULT_DISABLED_EXCHANGES.includes(exchange),
-				]),
+				ALL_EXCHANGES.map((exchange) => [exchange, !DEFAULT_DISABLED_EXCHANGES.includes(exchange)]),
 			)
 		}
 	})
@@ -107,6 +98,19 @@ export function FundingRatePage() {
 		id: exchange,
 		label: EXCHANGE_DISPLAY_NAME[exchange],
 	}))
+
+	// Hide exchanges that have zero valid price data across ALL symbols.
+	// "Valid" = at least one symbol where markPrice > 0 or indexPrice > 0.
+	const visibleExchanges = useMemo(() => {
+		const allSymbols = Object.values(rates)
+		if (allSymbols.length === 0) return exchangesList
+		return exchangesList.filter((ex) =>
+			allSymbols.some((symbolRates) => {
+				const r = symbolRates[ex.id]
+				return r && (r.markPrice > 0 || r.indexPrice > 0)
+			}),
+		)
+	}, [rates, exchangesList])
 
 	const handleToggleExchange = (id: string) => {
 		setEnabledExchanges((prev) => ({ ...prev, [id]: !prev[id] }))
@@ -159,7 +163,7 @@ export function FundingRatePage() {
 		})
 	}, [filteredSymbols, rates, sortConfig])
 
-	const activeExchanges = exchangesList.filter((ex) => enabledExchanges[ex.id])
+	const activeExchanges = visibleExchanges.filter((ex) => enabledExchanges[ex.id])
 
 	if (loading) {
 		return (
@@ -205,7 +209,7 @@ export function FundingRatePage() {
 			</div>
 
 			<FilterBar
-				exchanges={exchangesList.map((ex) => ({
+				exchanges={visibleExchanges.map((ex) => ({
 					...ex,
 					enabled: !!enabledExchanges[ex.id],
 					colorClass: getExchangeBgClass(ex.id),
@@ -230,7 +234,7 @@ export function FundingRatePage() {
 				</div>
 			</div>
 
-			<OpportunityPanel />
+			<OpportunityPanel visibleExchanges={visibleExchanges.map((ex) => ex.id)} />
 
 			{sortedSymbols.length === 0 ? (
 				<div className="flex flex-col items-center justify-center py-20 text-gray-500 bg-gray-900/30 rounded-xl border border-gray-800">
