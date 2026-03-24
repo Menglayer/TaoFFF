@@ -37,3 +37,7 @@ coverage/
 *.tgz
 .cache/
 nul
+
+# Debug artifacts (prevent accidental commits)
+/*.png
+/*.mjs

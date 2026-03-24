@@ -1,16 +1,3 @@
-export function SkeletonRow({ count = 1 }: { count?: number }) {
-	return (
-		<>
-			{Array.from({ length: count }).map((_, i) => (
-				<div
-					key={`skeleton-row-${i}`}
-					className="mb-2 h-10 w-full animate-pulse rounded bg-gray-800"
-				/>
-			))}
-		</>
-	)
-}
-
 export function SkeletonCard({ count = 1 }: { count?: number }) {
 	return (
 		<>
