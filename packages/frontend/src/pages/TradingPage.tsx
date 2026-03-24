@@ -467,6 +467,12 @@ export function TradingPage() {
 												浮动盈亏
 											</th>
 											<th className="pb-3 text-xs text-gray-500 uppercase tracking-wider font-medium">
+												手续费
+											</th>
+											<th className="pb-3 text-xs text-gray-500 uppercase tracking-wider font-medium">
+												资费收益
+											</th>
+											<th className="pb-3 text-xs text-gray-500 uppercase tracking-wider font-medium">
 												状态
 											</th>
 											<th className="pb-3 text-xs text-gray-500 uppercase tracking-wider font-medium text-right">
@@ -521,6 +527,30 @@ export function TradingPage() {
 																className={unrealizedPnl >= 0 ? "text-green-400" : "text-red-400"}
 															>
 																${unrealizedPnl.toFixed(4)}
+															</span>
+														) : (
+															<span className="text-gray-600">—</span>
+														)}
+													</td>
+													<td className="py-4 text-sm text-gray-400">
+														{isSim ? (
+															<span className="text-amber-400">
+																-${(pos.legA.fees + pos.legB.fees).toFixed(2)}
+															</span>
+														) : (
+															<span className="text-gray-600">—</span>
+														)}
+													</td>
+													<td className="py-4 text-sm">
+														{isSim && item.snapshot ? (
+															<span
+																className={
+																	item.snapshot.fundingAccrued >= 0
+																		? "text-green-400"
+																		: "text-red-400"
+																}
+															>
+																${item.snapshot.fundingAccrued.toFixed(4)}
 															</span>
 														) : (
 															<span className="text-gray-600">—</span>

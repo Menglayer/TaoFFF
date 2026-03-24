@@ -50,7 +50,7 @@ export class SimOrderExecutor {
 		if (!longRate) throw new Error(`No rate data for ${symbol} on ${longExchange}`)
 		if (!shortRate) throw new Error(`No rate data for ${symbol} on ${shortExchange}`)
 
-		// Check margin — both legs need margin
+		// Check margin — both legs need margin (use 2x sizeUsdt as estimate for pre-check)
 		const requiredMargin = computeRequiredMargin(sizeUsdt * 2, leverage)
 		const balance = await this.balanceManager.getBalance()
 		if (!balance) {
@@ -76,13 +76,20 @@ export class SimOrderExecutor {
 		const fillPriceA = computeSimFillPrice(basePriceA, this.config.slippagePct, "long")
 		const fillPriceB = computeSimFillPrice(basePriceB, this.config.slippagePct, "short")
 
-		// Compute sizes in base currency
-		const sizeA = sizeUsdt / fillPriceA
-		const sizeB = sizeUsdt / fillPriceB
+		// Compute sizes in base currency — SAME base quantity for both legs to ensure delta neutrality
+		// Use average of both fill prices as reference so both legs have identical base size
+		const refPrice = (fillPriceA + fillPriceB) / 2
+		const baseSize = sizeUsdt / refPrice
+		const sizeA = baseSize
+		const sizeB = baseSize
 
-		// Compute fees
-		const feesA = computeSimFees(sizeUsdt, this.config.tradingFeePct)
-		const feesB = computeSimFees(sizeUsdt, this.config.tradingFeePct)
+		// Actual notional per leg (slightly different due to different fill prices)
+		const notionalA = baseSize * fillPriceA
+		const notionalB = baseSize * fillPriceB
+
+		// Compute fees based on actual notional per leg
+		const feesA = computeSimFees(notionalA, this.config.tradingFeePct)
+		const feesB = computeSimFees(notionalB, this.config.tradingFeePct)
 
 		// Reserve margin
 		const reserved = await this.balanceManager.reserveMargin(requiredMargin)
