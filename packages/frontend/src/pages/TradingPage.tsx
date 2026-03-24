@@ -47,6 +47,7 @@ export function TradingPage() {
 		closeSimTrade,
 		connect: connectSim,
 		phase: simPhase,
+		error: simError,
 	} = useSimStore()
 
 	// Initialize from URL params on mount
@@ -69,12 +70,35 @@ export function TradingPage() {
 	// Get available symbols from rateStore
 	const symbols = useMemo(() => Object.keys(rates).sort(), [rates])
 
+	// Filter exchanges: only show those with valid price data for the selected symbol
+	const availableExchanges = useMemo(() => {
+		if (!selectedSymbol) return EXCHANGES
+		const symbolRates = rates[selectedSymbol]
+		if (!symbolRates) return EXCHANGES
+		return EXCHANGES.filter((ex) => {
+			const r = symbolRates[ex]
+			if (!r) return false
+			// Exclude exchanges where both markPrice and indexPrice are 0/missing
+			return r.markPrice > 0 || r.indexPrice > 0
+		})
+	}, [selectedSymbol, rates])
+
 	// If selectedSymbol is null but we have symbols, pick the first one
 	useEffect(() => {
 		if (!selectedSymbol && symbols.length > 0 && symbols[0]) {
 			setSymbol(symbols[0])
 		}
 	}, [selectedSymbol, symbols, setSymbol])
+
+	// Clear exchange selection if it's no longer available for the current symbol
+	useEffect(() => {
+		if (longExchange && !availableExchanges.includes(longExchange as Exchange)) {
+			setLongExchange("" as Exchange)
+		}
+		if (shortExchange && !availableExchanges.includes(shortExchange as Exchange)) {
+			setShortExchange("" as Exchange)
+		}
+	}, [availableExchanges, longExchange, shortExchange, setLongExchange, setShortExchange])
 
 	// Fee Preview Computations
 	const preview = useMemo(() => {
@@ -204,7 +228,7 @@ export function TradingPage() {
 									<option value="" disabled>
 										选择交易所
 									</option>
-									{EXCHANGES.map((ex) => (
+									{availableExchanges.map((ex) => (
 										<option key={ex} value={ex} disabled={ex === shortExchange}>
 											{EXCHANGE_DISPLAY_NAME[ex]}
 										</option>
@@ -222,7 +246,7 @@ export function TradingPage() {
 									<option value="" disabled>
 										选择交易所
 									</option>
-									{EXCHANGES.map((ex) => (
+									{availableExchanges.map((ex) => (
 										<option key={ex} value={ex} disabled={ex === longExchange}>
 											{EXCHANGE_DISPLAY_NAME[ex]}
 										</option>
@@ -321,6 +345,12 @@ export function TradingPage() {
 						>
 							{simPhase === "executing" ? "模拟中..." : "模拟开仓"}
 						</button>
+						{simPhase === "error" && simError && (
+							<p className="text-xs text-red-400 mt-1 px-1">{simError}</p>
+						)}
+						{simPhase === "success" && (
+							<p className="text-xs text-green-400 mt-1 px-1">模拟开仓成功</p>
+						)}
 					</div>
 				</div>
 

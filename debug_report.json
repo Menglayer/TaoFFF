@@ -1,0 +1,46 @@
+{
+  "timestamp": "2026-03-24T01:39:53.315Z",
+  "consoleLogs": [
+    "[debug] [vite] connecting...",
+    "[debug] [vite] connected.",
+    "[info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+    "[warning] WebSocket connection to 'ws://localhost:5173/ws' failed: WebSocket is closed before the connection is established.",
+    "[warning] WebSocket connection to 'ws://localhost:5173/ws' failed: WebSocket is closed before the connection is established.",
+    "[error] Failed to load resource: the server responded with a status of 500 (Internal Server Error)"
+  ],
+  "networkLogs": [
+    {
+      "url": "http://localhost:8080/api/sim/balance",
+      "status": 200
+    },
+    {
+      "url": "http://localhost:8080/api/sim/history",
+      "status": 200
+    },
+    {
+      "url": "http://localhost:8080/api/trade/positions",
+      "status": 200
+    },
+    {
+      "url": "http://localhost:8080/api/sim/balance",
+      "status": 200
+    },
+    {
+      "url": "http://localhost:8080/api/sim/history",
+      "status": 200
+    },
+    {
+      "url": "http://localhost:8080/api/trade/positions",
+      "status": 200
+    },
+    {
+      "url": "http://localhost:8080/api/sim/open",
+      "status": 500
+    }
+  ],
+  "screenshots": [
+    "debug_initial.png",
+    "debug_filled.png",
+    "debug_final.png"
+  ]
+}

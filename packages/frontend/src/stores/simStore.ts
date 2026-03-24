@@ -2,6 +2,24 @@ import type { HedgeTrade, SimPositionSnapshot, WsServerMessage } from "@taofff/s
 import { create } from "zustand"
 import { wsClient } from "../ws/client"
 
+/** Translate common backend error messages to Chinese */
+function translateSimError(msg: string): string {
+	if (msg.startsWith("No rate data for"))
+		return msg.replace(/No rate data for (.+) on (.+)/, "交易所 $2 没有 $1 的行情数据")
+	if (msg.startsWith("Invalid price data for"))
+		return msg.replace(
+			/Invalid price data for (.+): (.+)\. Cannot open trade\./,
+			"$1 价格数据无效（$2），无法开仓",
+		)
+	if (msg.startsWith("Insufficient balance"))
+		return msg.replace(
+			/Insufficient balance\. Required: (.+), Available: (.+)/,
+			"余额不足，需要 $$$1，可用 $$$2",
+		)
+	if (msg.includes("not initialized")) return "模拟余额未初始化，请先重置余额"
+	return msg
+}
+
 type SimPhase = "idle" | "executing" | "success" | "error"
 
 interface SimBalanceState {
@@ -54,8 +72,9 @@ export const useSimStore = create<SimState>((set, get) => ({
 				body: JSON.stringify(params),
 			})
 			if (!res.ok) {
-				const errText = await res.text()
-				throw new Error(errText || `模拟开仓失败 (${res.status})`)
+				const body = await res.json().catch(() => null)
+				const raw = (body as Record<string, string> | null)?.error ?? `模拟开仓失败 (${res.status})`
+				throw new Error(translateSimError(raw))
 			}
 			set({ phase: "success" })
 			// Refresh positions and balance
